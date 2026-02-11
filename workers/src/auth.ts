@@ -110,9 +110,22 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
 
   console.log('[OAuth] Found page:', brandName, 'pageId:', pageId, 'hasPageToken:', !!pageWithIG.access_token);
 
-  // 5. Save brand to Supabase (use page token for DM sending)
-  //    Instagram messaging webhooks are configured at app level in Meta Dashboard,
-  //    so page-level subscribed_apps is not needed.
+  // 5. Subscribe page to app for webhook delivery
+  const subRes = await fetch(
+    `https://graph.facebook.com/v21.0/${pageId}/subscribed_apps`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscribed_fields: ['messages'],
+        access_token: pageAccessToken,
+      }),
+    }
+  );
+  const subData = await subRes.json();
+  console.log('[OAuth] subscribed_apps response:', JSON.stringify(subData));
+
+  // 6. Save brand to Supabase (use page token for DM sending)
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
 
   const expiresAt = longTokenData.expires_in
