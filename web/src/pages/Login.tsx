@@ -1,6 +1,9 @@
 import React from 'react';
 
 export default function Login() {
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get('error');
+
   const handleInstagramLogin = () => {
     const appId = process.env.REACT_APP_META_APP_ID;
     const workersUrl = process.env.REACT_APP_WORKERS_URL;
@@ -22,6 +25,11 @@ export default function Login() {
           릴스를 공유하면 자동으로 DM을 보내주는 서비스.<br />
           댓글 없이, 흔적 없이 — 공유만으로 구매 전환.
         </p>
+        {error && (
+          <div style={styles.error}>
+            {decodeURIComponent(error)}
+          </div>
+        )}
         <button onClick={handleInstagramLogin} style={styles.button}>
           Instagram 비즈니스 계정 연결하기
         </button>
@@ -76,6 +84,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '8px',
     cursor: 'pointer',
     width: '100%',
+  },
+  error: {
+    backgroundColor: '#FEE2E2',
+    color: '#DC2626',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    marginBottom: '16px',
   },
   note: {
     fontSize: '12px',

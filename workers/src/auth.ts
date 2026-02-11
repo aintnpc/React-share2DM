@@ -56,13 +56,16 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
   );
   const pagesData: IGAccountResponse = await pagesRes.json() as IGAccountResponse;
 
+  console.log('[OAuth] me/accounts response:', JSON.stringify(pagesData));
+
   // 4. Find page with Instagram Business Account
   const pageWithIG = pagesData.data?.find(
     (p) => p.instagram_business_account?.id
   );
 
   if (!pageWithIG || !pageWithIG.instagram_business_account) {
-    throw new Error('Instagram 비즈니스 계정을 찾을 수 없습니다.');
+    const pageNames = pagesData.data?.map(p => p.name).join(', ') || 'none';
+    throw new Error(`IG 비즈니스 계정을 찾을 수 없습니다. 연결된 페이지: ${pageNames}`);
   }
 
   const igAccountId = pageWithIG.instagram_business_account.id;
