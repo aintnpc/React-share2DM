@@ -32,8 +32,10 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
   );
   const tokenData: TokenResponse = await tokenRes.json() as TokenResponse;
 
+  console.log('[OAuth] Step 1 - short-lived token:', JSON.stringify(tokenData));
+
   if (!tokenData.access_token) {
-    throw new Error('Token exchange failed');
+    throw new Error('Token exchange failed: ' + JSON.stringify(tokenData));
   }
 
   // 2. Exchange for long-lived token (60 days)
@@ -48,15 +50,47 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
     `https://graph.facebook.com/v21.0/oauth/access_token?${longTokenParams}`
   );
   const longTokenData: TokenResponse = await longTokenRes.json() as TokenResponse;
+  console.log('[OAuth] Step 2 - long-lived token:', JSON.stringify(longTokenData));
   const accessToken = longTokenData.access_token || tokenData.access_token;
+
+  // 2.5. Check actual permissions on this token
+  const permRes = await fetch(
+    `https://graph.facebook.com/v21.0/me/permissions?access_token=${accessToken}`
+  );
+  const permData = await permRes.json();
+  console.log('[OAuth] Token permissions:', JSON.stringify(permData));
 
   // 3. Get Facebook Pages linked to user
   const pagesRes = await fetch(
     `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,instagram_business_account&access_token=${accessToken}`
   );
   const pagesData: IGAccountResponse = await pagesRes.json() as IGAccountResponse;
-
   console.log('[OAuth] me/accounts response:', JSON.stringify(pagesData));
+
+  // 3.5. If no pages found, check Business Manager
+  if (!pagesData.data?.length) {
+    const bizRes = await fetch(
+      `https://graph.facebook.com/v21.0/me/businesses?access_token=${accessToken}`
+    );
+    const bizData = await bizRes.json();
+    console.log('[OAuth] me/businesses response:', JSON.stringify(bizData));
+
+    // Try to get pages from each business
+    if ((bizData as any).data?.length) {
+      for (const biz of (bizData as any).data) {
+        const bizPagesRes = await fetch(
+          `https://graph.facebook.com/v21.0/${biz.id}/owned_pages?fields=id,name,instagram_business_account&access_token=${accessToken}`
+        );
+        const bizPagesData = await bizPagesRes.json();
+        console.log(`[OAuth] Business ${biz.name} pages:`, JSON.stringify(bizPagesData));
+
+        if ((bizPagesData as any).data?.length) {
+          pagesData.data = (bizPagesData as any).data;
+          break;
+        }
+      }
+    }
+  }
 
   // 4. Find page with Instagram Business Account
   const pageWithIG = pagesData.data?.find(
