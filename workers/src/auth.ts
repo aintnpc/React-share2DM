@@ -11,6 +11,7 @@ interface IGAccountResponse {
   data: Array<{
     id: string;
     name: string;
+    access_token?: string;
     instagram_business_account?: {
       id: string;
     };
@@ -62,7 +63,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
 
   // 3. Get Facebook Pages linked to user
   const pagesRes = await fetch(
-    `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,instagram_business_account&access_token=${accessToken}`
+    `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${accessToken}`
   );
   const pagesData: IGAccountResponse = await pagesRes.json() as IGAccountResponse;
   console.log('[OAuth] me/accounts response:', JSON.stringify(pagesData));
@@ -79,7 +80,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
     if ((bizData as any).data?.length) {
       for (const biz of (bizData as any).data) {
         const bizPagesRes = await fetch(
-          `https://graph.facebook.com/v21.0/${biz.id}/owned_pages?fields=id,name,instagram_business_account&access_token=${accessToken}`
+          `https://graph.facebook.com/v21.0/${biz.id}/owned_pages?fields=id,name,access_token,instagram_business_account&access_token=${accessToken}`
         );
         const bizPagesData = await bizPagesRes.json();
         console.log(`[OAuth] Business ${biz.name} pages:`, JSON.stringify(bizPagesData));
@@ -104,10 +105,14 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
 
   const igAccountId = pageWithIG.instagram_business_account.id;
   const brandName = pageWithIG.name;
+  const pageAccessToken = pageWithIG.access_token || accessToken;
+  const pageId = pageWithIG.id;
 
-  // 5. Webhook subscription is configured manually in Meta App Dashboard
+  console.log('[OAuth] Found page:', brandName, 'pageId:', pageId, 'hasPageToken:', !!pageWithIG.access_token);
 
-  // 6. Save brand to Supabase
+  // 5. Save brand to Supabase (use page token for DM sending)
+  //    Instagram messaging webhooks are configured at app level in Meta Dashboard,
+  //    so page-level subscribed_apps is not needed.
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
 
   const expiresAt = longTokenData.expires_in
@@ -120,7 +125,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
       {
         brand_name: brandName,
         ig_account_id: igAccountId,
-        ig_access_token: accessToken,
+        ig_access_token: pageAccessToken,
         token_expires_at: expiresAt,
       },
       { onConflict: 'ig_account_id' }
