@@ -68,18 +68,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
   const igAccountId = pageWithIG.instagram_business_account.id;
   const brandName = pageWithIG.name;
 
-  // 5. Subscribe to webhooks for this page
-  await fetch(
-    `https://graph.facebook.com/v21.0/${pageWithIG.id}/subscribed_apps`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subscribed_fields: ['messages'],
-        access_token: accessToken,
-      }),
-    }
-  );
+  // 5. Webhook subscription is configured manually in Meta App Dashboard
 
   // 6. Save brand to Supabase
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
