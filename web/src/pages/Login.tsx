@@ -8,7 +8,7 @@ export default function Login() {
     const appId = process.env.REACT_APP_META_APP_ID;
     const workersUrl = process.env.REACT_APP_WORKERS_URL;
     const redirectUri = `${workersUrl}/auth/callback`;
-    const scope = 'instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,business_management';
+    const scope = 'instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging,business_management';
     const state = encodeURIComponent(window.location.origin);
 
     const authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&state=${state}`;
