@@ -1,0 +1,14 @@
+node_modules/
+.DS_Store
+
+# web
+web/build/
+web/.env
+web/.env.local
+web/.env.development.local
+web/.env.test.local
+web/.env.production.local
+
+# workers
+workers/.env
+workers/.dev.vars

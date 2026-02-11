@@ -1,0 +1,17 @@
+{
+  "name": "share2dm-webhook",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}

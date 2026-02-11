@@ -1,0 +1,7 @@
+name = "share2dm-webhook"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+account_id = "d35802d18d8a8be726a4956153bcc895"
+
+[vars]
+ENVIRONMENT = "production"
