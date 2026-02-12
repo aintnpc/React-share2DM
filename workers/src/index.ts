@@ -52,15 +52,33 @@ async function handleDebugSubscriptions(env: Env): Promise<Response> {
     );
     const resubData: any = await resubRes.json();
 
+    // Check IG messaging access (conversations)
+    const igId = meData.instagram_business_account?.id;
+    let conversationsCheck: any = null;
+    if (igId) {
+      const convRes = await fetch(
+        `https://graph.instagram.com/v21.0/${igId}/conversations?access_token=${token}`
+      );
+      conversationsCheck = await convRes.json();
+    }
+
+    // Check app-level webhook subscriptions
+    const appSubRes = await fetch(
+      `https://graph.facebook.com/v21.0/${env.META_APP_ID}/subscriptions?access_token=${env.META_APP_ID}|${env.META_APP_SECRET}`
+    );
+    const appSubData: any = await appSubRes.json();
+
     results.push({
       brand: brand.brand_name,
       page: meData.name,
       pageId,
-      igAccount: meData.instagram_business_account?.id,
+      igAccount: igId,
       storedIgAccountId: brand.ig_account_id,
       tokenExpiresAt: brand.token_expires_at,
       currentSubscriptions: subCheckData,
       resubscribeResult: resubData,
+      igConversations: conversationsCheck,
+      appWebhookSubscriptions: appSubData,
     });
   }
 
@@ -70,7 +88,7 @@ async function handleDebugSubscriptions(env: Env): Promise<Response> {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     console.log(`[Worker] ${request.method} ${url.pathname}`);
 
@@ -103,7 +121,7 @@ export default {
 
       // Webhook event (POST /webhook)
       if (url.pathname === '/webhook' && request.method === 'POST') {
-        return handleWebhookEvent(request, env);
+        return handleWebhookEvent(request, env, ctx);
       }
 
       // Click tracking redirect (GET /t/{campaign_id}/{sender_ig_id})
