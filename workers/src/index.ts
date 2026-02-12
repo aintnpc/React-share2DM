@@ -2,6 +2,72 @@ import { Env } from './types';
 import { handleWebhookVerification, handleWebhookEvent } from './webhook';
 import { handleTracking } from './tracking';
 import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
+import { createClient } from '@supabase/supabase-js';
+
+async function handleDebugSubscriptions(env: Env): Promise<Response> {
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+  const { data: brands } = await supabase.from('brands').select('*');
+
+  if (!brands?.length) {
+    return new Response(JSON.stringify({ error: 'No brands found' }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const results = [];
+
+  for (const brand of brands) {
+    const token = brand.ig_access_token;
+
+    // Token is a Page Access Token, so `me` returns the Page itself
+    const meRes = await fetch(
+      `https://graph.facebook.com/v21.0/me?fields=id,name,instagram_business_account&access_token=${token}`
+    );
+    const meData: any = await meRes.json();
+
+    if (meData.error) {
+      results.push({ brand: brand.brand_name, tokenError: meData.error });
+      continue;
+    }
+
+    const pageId = meData.id;
+
+    // Check current subscriptions
+    const subCheckRes = await fetch(
+      `https://graph.facebook.com/v21.0/${pageId}/subscribed_apps?access_token=${token}`
+    );
+    const subCheckData: any = await subCheckRes.json();
+
+    // Re-subscribe
+    const resubRes = await fetch(
+      `https://graph.facebook.com/v21.0/${pageId}/subscribed_apps`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscribed_fields: ['messages'],
+          access_token: token,
+        }),
+      }
+    );
+    const resubData: any = await resubRes.json();
+
+    results.push({
+      brand: brand.brand_name,
+      page: meData.name,
+      pageId,
+      igAccount: meData.instagram_business_account?.id,
+      storedIgAccountId: brand.ig_account_id,
+      tokenExpiresAt: brand.token_expires_at,
+      currentSubscriptions: subCheckData,
+      resubscribeResult: resubData,
+    });
+  }
+
+  return new Response(JSON.stringify(results, null, 2), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -43,6 +109,11 @@ export default {
       // Click tracking redirect (GET /t/{campaign_id}/{sender_ig_id})
       if (url.pathname.startsWith('/t/') && request.method === 'GET') {
         return handleTracking(request, env);
+      }
+
+      // Debug: check & resubscribe page webhooks (GET /debug/subscriptions)
+      if (url.pathname === '/debug/subscriptions' && request.method === 'GET') {
+        return handleDebugSubscriptions(env);
       }
 
       // Health check
