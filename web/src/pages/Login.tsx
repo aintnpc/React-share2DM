@@ -1,6 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Instagram } from 'lucide-react';
 
 export default function Login() {
+  const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const error = params.get('error');
 
@@ -17,90 +20,63 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <img
-          src={`${process.env.PUBLIC_URL}/share2dm_logo_nobg.png`}
-          alt="share2dm"
-          style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 12px' }}
-        />
-        <h1 style={styles.title}>share2dm</h1>
-        <p style={styles.subtitle}>릴스 공유 기반 자동 DM 마케팅</p>
-        <p style={styles.description}>
-          릴스를 공유하면 자동으로 DM을 보내주는 서비스.<br />
-          댓글 없이, 흔적 없이 — 공유만으로 구매 전환.
-        </p>
-        {error && (
-          <div style={styles.error}>
-            {decodeURIComponent(error)}
+    <div className="min-h-screen pt-24 pb-12 px-6 flex items-center justify-center relative bg-[#0B0914] overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-purple-500/25 to-pink-500/25 blur-[150px] rounded-full pointer-events-none"></div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div
+          className="text-center mb-8 cursor-pointer flex flex-col items-center"
+          onClick={() => navigate('/')}
+        >
+          <img
+            src={`${process.env.PUBLIC_URL}/share2dm_logo_nobg.png`}
+            alt="share2dm"
+            className="w-12 h-12 rounded-full mb-4 shadow-[0_0_20px_rgba(147,51,234,0.4)]"
+          />
+          <h2 className="text-3xl font-extrabold text-white">share2dm 시작하기</h2>
+          <p className="text-gray-400 mt-2">마케팅 패러다임을 바꿀 준비가 되셨나요?</p>
+        </div>
+
+        <div className="bg-[#151221]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {decodeURIComponent(error)}
+            </div>
+          )}
+
+          <button
+            onClick={handleInstagramLogin}
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_0_20px_rgba(147,51,234,0.3)]"
+          >
+            <Instagram className="w-5 h-5" />
+            Instagram 비즈니스 계정 연결하기
+          </button>
+
+          <p className="text-center mt-6 text-xs text-gray-500">
+            Instagram 비즈니스 계정 + Facebook 페이지가 필요합니다.
+          </p>
+
+          <div className="mt-8 pt-6 border-t border-white/10">
+            <p className="text-center text-xs text-gray-500 leading-relaxed">
+              계속 진행하면{' '}
+              <button onClick={() => navigate('/terms/service')} className="text-purple-400 hover:text-purple-300">
+                이용약관
+              </button>
+              {' '}및{' '}
+              <button onClick={() => navigate('/terms/privacy')} className="text-purple-400 hover:text-purple-300">
+                개인정보처리방침
+              </button>
+              에 동의하는 것으로 간주됩니다.
+            </p>
           </div>
-        )}
-        <button onClick={handleInstagramLogin} style={styles.button}>
-          Instagram 비즈니스 계정 연결하기
-        </button>
-        <p style={styles.note}>
-          Instagram 비즈니스 계정 + Facebook 페이지가 필요합니다.
+        </div>
+
+        <p className="text-center mt-6 text-sm text-gray-400">
+          <button onClick={() => navigate('/')} className="text-purple-400 font-medium hover:text-purple-300">
+            ← 홈으로 돌아가기
+          </button>
         </p>
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    backgroundColor: '#fafafa',
-  },
-  card: {
-    textAlign: 'center',
-    padding: '48px',
-    backgroundColor: 'white',
-    borderRadius: '16px',
-    boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
-    maxWidth: '420px',
-    width: '100%',
-  },
-  title: {
-    fontSize: '32px',
-    fontWeight: 700,
-    margin: '0 0 8px 0',
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#888',
-    margin: '0 0 24px 0',
-  },
-  description: {
-    fontSize: '15px',
-    color: '#444',
-    lineHeight: '1.6',
-    margin: '0 0 32px 0',
-  },
-  button: {
-    padding: '14px 32px',
-    fontSize: '16px',
-    fontWeight: 600,
-    backgroundColor: '#E1306C',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    width: '100%',
-  },
-  error: {
-    backgroundColor: '#FEE2E2',
-    color: '#DC2626',
-    padding: '12px 16px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    marginBottom: '16px',
-  },
-  note: {
-    fontSize: '12px',
-    color: '#aaa',
-    marginTop: '16px',
-  },
-};

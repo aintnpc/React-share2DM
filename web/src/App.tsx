@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/Home';
 import Pricing from './pages/Pricing';
+import ServiceTerms from './pages/terms/ServiceTerms';
+import PrivacyPolicy from './pages/terms/PrivacyPolicy';
 import LandingLayout from './layouts/LandingLayout';
 
 function App() {
@@ -26,6 +28,11 @@ function App() {
           path="/dashboard"
           element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}
         />
+
+        {/* Terms */}
+        <Route path="/terms/service" element={<ServiceTerms />} />
+        <Route path="/terms/privacy" element={<PrivacyPolicy />} />
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

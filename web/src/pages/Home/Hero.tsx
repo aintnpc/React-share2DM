@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Share2 } from 'lucide-react';
 
 const Hero = () => {
   const [step, setStep] = useState(0);

@@ -23,15 +23,15 @@ const Footer = () => {
               댓글 없이, 흔적 없이 — 공유만으로 완벽하게 이어지는 인스타그램 구매 전환 자동화 솔루션.
             </p>
             <div className="flex items-center gap-4">
-              <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
+              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
                 <Instagram className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
+              </button>
+              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
                 <Twitter className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
+              </button>
+              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
                 <Github className="w-4 h-4" />
-              </a>
+              </button>
             </div>
           </div>
 
@@ -48,10 +48,9 @@ const Footer = () => {
           <div>
             <h4 className="text-white font-semibold mb-6">회사</h4>
             <ul className="space-y-4 text-sm text-gray-400">
-              <li><a href="#" className="hover:text-purple-400 transition-colors">블로그</a></li>
-              <li><a href="#" className="hover:text-purple-400 transition-colors">이용약관</a></li>
-              <li><a href="#" className="hover:text-purple-400 transition-colors">개인정보처리방침</a></li>
-              <li><a href="#" className="hover:text-purple-400 transition-colors">문의하기</a></li>
+              <li><button onClick={() => navigate('/terms/service')} className="hover:text-purple-400 transition-colors">이용약관</button></li>
+              <li><button onClick={() => navigate('/terms/privacy')} className="hover:text-purple-400 transition-colors">개인정보처리방침</button></li>
+              <li><a href="mailto:share2dm@gmail.com" className="hover:text-purple-400 transition-colors">문의하기</a></li>
             </ul>
           </div>
 
