@@ -28,13 +28,17 @@ export async function handleWebhookEvent(
   }
 
   const body = await request.text();
+  console.log('[Webhook] Received event:', body);
 
   const isValid = await verifySignature(body, signature, env.META_APP_SECRET);
   if (!isValid) {
+    const expected = await computeSignature(body, env.META_APP_SECRET);
+    console.log('[Webhook] Invalid signature. received:', signature, 'expected:', expected, 'secret_length:', env.META_APP_SECRET?.length, 'secret_prefix:', env.META_APP_SECRET?.substring(0, 4));
     return new Response('Invalid signature', { status: 401 });
   }
 
   const payload: WebhookBody = JSON.parse(body);
+  console.log('[Webhook] object:', payload.object);
 
   if (payload.object !== 'instagram') {
     return new Response('OK', { status: 200 });
@@ -147,11 +151,7 @@ async function sendInstagramDM(
   }
 }
 
-async function verifySignature(
-  body: string,
-  signature: string,
-  appSecret: string
-): Promise<boolean> {
+async function computeSignature(body: string, appSecret: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
@@ -164,7 +164,14 @@ async function verifySignature(
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
   const hashArray = Array.from(new Uint8Array(sig));
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  const expectedSignature = `sha256=${hashHex}`;
+  return `sha256=${hashHex}`;
+}
 
+async function verifySignature(
+  body: string,
+  signature: string,
+  appSecret: string
+): Promise<boolean> {
+  const expectedSignature = await computeSignature(body, appSecret);
   return signature === expectedSignature;
 }
