@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AuthCallback from './pages/AuthCallback';
+import HomePage from './pages/Home';
+import Pricing from './pages/Pricing';
+import LandingLayout from './layouts/LandingLayout';
 
 function App() {
   const isLoggedIn = !!localStorage.getItem('brand_id');
@@ -10,13 +13,20 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Landing pages with Navbar + Footer */}
+        <Route element={<LandingLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/pricing" element={<Pricing />} />
+        </Route>
+
+        {/* App pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/dashboard"
           element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}
         />
-        <Route path="*" element={<Navigate to={isLoggedIn ? '/dashboard' : '/login'} />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );
