@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Share2, Instagram, Twitter, Github, Mail } from 'lucide-react';
+import { Instagram, Twitter, Github, Mail } from 'lucide-react';
 
 const Footer = () => {
   const navigate = useNavigate();
@@ -12,7 +12,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-16">
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-6 cursor-pointer" onClick={() => navigate('/')}>
-              <Share2 className="w-5 h-5 text-purple-500" />
+              <img
+                src={`${process.env.PUBLIC_URL}/share2dm_logo_nobg.png`}
+                alt="share2dm"
+                className="w-6 h-6 rounded-full"
+              />
               <span className="text-xl font-bold text-white tracking-tight">share2dm</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
@@ -55,8 +59,8 @@ const Footer = () => {
             <h4 className="text-white font-semibold mb-6">고객 지원</h4>
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
               <p className="text-sm text-gray-400 mb-4">궁금한 점이 있으신가요?</p>
-              <a href="mailto:support@share2dm.com" className="flex items-center gap-2 text-sm text-white hover:text-purple-400 transition-colors">
-                <Mail className="w-4 h-4" /> support@share2dm.com
+              <a href="mailto:share2dm@gmail.com" className="flex items-center gap-2 text-sm text-white hover:text-purple-400 transition-colors">
+                <Mail className="w-4 h-4" /> share2dm@gmail.com
               </a>
             </div>
           </div>

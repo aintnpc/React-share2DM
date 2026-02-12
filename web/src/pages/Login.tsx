@@ -19,6 +19,11 @@ export default function Login() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        <img
+          src={`${process.env.PUBLIC_URL}/share2dm_logo_nobg.png`}
+          alt="share2dm"
+          style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 12px' }}
+        />
         <h1 style={styles.title}>share2dm</h1>
         <p style={styles.subtitle}>릴스 공유 기반 자동 DM 마케팅</p>
         <p style={styles.description}>

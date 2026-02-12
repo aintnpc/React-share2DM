@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Share2, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -12,9 +12,11 @@ const Navbar = () => {
         className="flex items-center gap-2 cursor-pointer group"
         onClick={() => navigate('/')}
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 group-hover:scale-105 transition-transform">
-          <Share2 className="w-4 h-4 text-white" />
-        </div>
+        <img
+          src={`${process.env.PUBLIC_URL}/share2dm_logo_nobg.png`}
+          alt="share2dm"
+          className="w-8 h-8 rounded-full group-hover:scale-105 transition-transform"
+        />
         <span className="text-xl font-bold text-white tracking-tight">share2dm</span>
       </div>
       <div className="hidden md:flex items-center gap-8 text-sm font-medium">
