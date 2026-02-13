@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LangProvider } from './lib/i18n';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AuthCallback from './pages/AuthCallback';
@@ -13,6 +14,7 @@ function App() {
   const isLoggedIn = !!localStorage.getItem('brand_id');
 
   return (
+    <LangProvider>
     <BrowserRouter>
       <Routes>
         {/* Landing pages with Navbar + Footer */}
@@ -36,6 +38,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
+    </LangProvider>
   );
 }
 

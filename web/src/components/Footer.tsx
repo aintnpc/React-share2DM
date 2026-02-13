@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { Instagram, Twitter, Github, Mail } from 'lucide-react';
+import { Instagram, /* Twitter, Github, */ Mail } from 'lucide-react';
+import { useLang } from '../lib/i18n';
 
 const Footer = () => {
   const navigate = useNavigate();
+  const { t } = useLang();
 
   return (
     <footer className="py-16 md:py-24 bg-[#05040a] border-t border-white/5 relative overflow-hidden">
@@ -20,44 +22,47 @@ const Footer = () => {
               <span className="text-xl font-bold text-white tracking-tight">share2dm</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
-              댓글 없이, 흔적 없이 — 공유만으로 완벽하게 이어지는 인스타그램 구매 전환 자동화 솔루션.
+              {t(
+                '댓글 없이, 흔적 없이 — 공유만으로 완벽하게 이어지는 인스타그램 구매 전환 자동화 솔루션.',
+                'No comments, no trace — an Instagram purchase conversion automation solution powered entirely by shares.'
+              )}
             </p>
             <div className="flex items-center gap-4">
               <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
                 <Instagram className="w-4 h-4" />
               </button>
-              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
+              {/* <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
                 <Twitter className="w-4 h-4" />
               </button>
               <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-gray-400 transition-all border border-white/5">
                 <Github className="w-4 h-4" />
-              </button>
+              </button> */}
             </div>
           </div>
 
           <div>
-            <h4 className="text-white font-semibold mb-6">제품</h4>
+            <h4 className="text-white font-semibold mb-6">{t('제품', 'Product')}</h4>
             <ul className="space-y-4 text-sm text-gray-400">
-              <li><button onClick={() => navigate('/')} className="hover:text-purple-400 transition-colors">홈</button></li>
-              <li><button className="hover:text-purple-400 transition-colors">기능 소개</button></li>
-              <li><button onClick={() => navigate('/pricing')} className="hover:text-purple-400 transition-colors">요금제</button></li>
-              <li><button className="hover:text-purple-400 transition-colors">성공 사례</button></li>
+              <li><button onClick={() => navigate('/')} className="hover:text-purple-400 transition-colors">{t('홈', 'Home')}</button></li>
+              {/* <li><button className="hover:text-purple-400 transition-colors">기능 소개</button></li> */}
+              <li><button onClick={() => navigate('/pricing')} className="hover:text-purple-400 transition-colors">{t('요금제', 'Pricing')}</button></li>
+              {/* <li><button className="hover:text-purple-400 transition-colors">성공 사례</button></li> */}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-semibold mb-6">회사</h4>
+            <h4 className="text-white font-semibold mb-6">{t('회사', 'Company')}</h4>
             <ul className="space-y-4 text-sm text-gray-400">
-              <li><button onClick={() => navigate('/terms/service')} className="hover:text-purple-400 transition-colors">이용약관</button></li>
-              <li><button onClick={() => navigate('/terms/privacy')} className="hover:text-purple-400 transition-colors">개인정보처리방침</button></li>
-              <li><a href="mailto:share2dm@gmail.com" className="hover:text-purple-400 transition-colors">문의하기</a></li>
+              <li><button onClick={() => navigate('/terms/service')} className="hover:text-purple-400 transition-colors">{t('이용약관', 'Terms of Service')}</button></li>
+              <li><button onClick={() => navigate('/terms/privacy')} className="hover:text-purple-400 transition-colors">{t('개인정보처리방침', 'Privacy Policy')}</button></li>
+              <li><a href="mailto:share2dm@gmail.com" className="hover:text-purple-400 transition-colors">{t('문의하기', 'Contact Us')}</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-semibold mb-6">고객 지원</h4>
+            <h4 className="text-white font-semibold mb-6">{t('고객 지원', 'Support')}</h4>
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-              <p className="text-sm text-gray-400 mb-4">궁금한 점이 있으신가요?</p>
+              <p className="text-sm text-gray-400 mb-4">{t('궁금한 점이 있으신가요?', 'Have a question?')}</p>
               <a href="mailto:share2dm@gmail.com" className="flex items-center gap-2 text-sm text-white hover:text-purple-400 transition-colors">
                 <Mail className="w-4 h-4" /> share2dm@gmail.com
               </a>
