@@ -3,9 +3,8 @@
   "name": "share2dm — 공유기반 인스타그램 DM 자동화",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "share2dm_logo_nobg.png",
+      "type": "image/png"
     },
     {
       "src": "logo192.png",
