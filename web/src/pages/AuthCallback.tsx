@@ -21,7 +21,7 @@ export default function AuthCallback() {
       localStorage.setItem('brand_id', brandId);
       localStorage.setItem('brand_name', brandName);
       setStatus('연결 완료! 대시보드로 이동합니다...');
-      setTimeout(() => navigate('/dashboard'), 1000);
+      setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
       return;
     }
 

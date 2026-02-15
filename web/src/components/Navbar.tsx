@@ -20,7 +20,7 @@ const Navbar = () => {
           className="w-8 h-8 rounded-full group-hover:scale-105 transition-transform"
         />
         <span className="text-xl font-bold text-white tracking-tight">share2dm</span>
-        <span className="text-[10px] text-gray-500 font-medium ml-1 self-end mb-0.5">powered by clozet</span>
+        <a href="https://clozet.my" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-500 font-medium ml-1 self-end mb-0.5 hover:text-gray-300 transition-colors">powered by clozet</a>
       </div>
       <div className="hidden md:flex items-center gap-8 text-sm font-medium">
         <button
