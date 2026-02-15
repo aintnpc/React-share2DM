@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { PLAN_CONFIG, PlanName } from '../lib/plan-config';
 
@@ -30,18 +30,7 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ reel_url: '', response_message: '', product_url: '' });
 
-  useEffect(() => {
-    if (!brandId) return;
-    loadBrandInfo();
-  }, []);
-
-  useEffect(() => {
-    if (!brandId) return;
-    loadCampaigns();
-    loadStats();
-  }, [brandPlan]);
-
-  const loadBrandInfo = async () => {
+  const loadBrandInfo = useCallback(async () => {
     const { data } = await supabase
       .from('share2dm_brands')
       .select('plan')
@@ -50,9 +39,9 @@ export default function Dashboard() {
     if (data) {
       setBrandPlan(data.plan as PlanName);
     }
-  };
+  }, [brandId]);
 
-  const loadCampaigns = async () => {
+  const loadCampaigns = useCallback(async () => {
     const { data } = await supabase
       .from('share2dm_campaigns')
       .select('*')
@@ -66,9 +55,9 @@ export default function Dashboard() {
         limit: limits.maxCampaigns === -1 ? Infinity : limits.maxCampaigns,
       });
     }
-  };
+  }, [brandId, brandPlan]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     const { count: dmCount } = await supabase
       .from('share2dm_dm_logs')
       .select('*', { count: 'exact', head: true })
@@ -101,7 +90,18 @@ export default function Dashboard() {
       used: monthlyDmCount || 0,
       limit: limits.dmPerMonth === -1 ? Infinity : limits.dmPerMonth,
     });
-  };
+  }, [brandId, brandPlan]);
+
+  useEffect(() => {
+    if (!brandId) return;
+    loadBrandInfo();
+  }, [brandId, loadBrandInfo]);
+
+  useEffect(() => {
+    if (!brandId) return;
+    loadCampaigns();
+    loadStats();
+  }, [brandId, brandPlan, loadCampaigns, loadStats]);
 
   const extractReelVideoId = (url: string): string => {
     const match = url.match(/\/reel\/([^/?]+)/);
