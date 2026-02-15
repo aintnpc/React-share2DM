@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { PLAN_CONFIG, PlanName } from '../lib/plan-config';
 
 interface Campaign {
   id: string;
@@ -18,61 +19,114 @@ interface Stats {
 }
 
 export default function Dashboard() {
+  const brandId = localStorage.getItem('brand_id');
+  const brandName = localStorage.getItem('brand_name') || 'My Brand';
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [stats, setStats] = useState<Stats>({ totalShares: 0, totalDMs: 0, totalClicks: 0 });
+  const [brandPlan, setBrandPlan] = useState<PlanName>('free');
+  const [dmUsage, setDmUsage] = useState({ used: 0, limit: 1000 });
+  const [campaignUsage, setCampaignUsage] = useState({ used: 0, limit: 1 });
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ reel_url: '', response_message: '', product_url: '' });
 
   useEffect(() => {
+    if (!brandId) return;
+    loadBrandInfo();
+  }, []);
+
+  useEffect(() => {
+    if (!brandId) return;
     loadCampaigns();
     loadStats();
-  }, []);
+  }, [brandPlan]);
+
+  const loadBrandInfo = async () => {
+    const { data } = await supabase
+      .from('share2dm_brands')
+      .select('plan')
+      .eq('id', brandId)
+      .single();
+    if (data) {
+      setBrandPlan(data.plan as PlanName);
+    }
+  };
 
   const loadCampaigns = async () => {
     const { data } = await supabase
-      .from('campaigns')
+      .from('share2dm_campaigns')
       .select('*')
+      .eq('brand_id', brandId)
       .order('created_at', { ascending: false });
-    if (data) setCampaigns(data);
+    if (data) {
+      setCampaigns(data);
+      const limits = PLAN_CONFIG[brandPlan];
+      setCampaignUsage({
+        used: data.length,
+        limit: limits.maxCampaigns === -1 ? Infinity : limits.maxCampaigns,
+      });
+    }
   };
 
   const loadStats = async () => {
     const { count: dmCount } = await supabase
-      .from('dm_logs')
-      .select('*', { count: 'exact', head: true });
+      .from('share2dm_dm_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('brand_id', brandId);
 
     const { count: clickCount } = await supabase
-      .from('dm_logs')
+      .from('share2dm_dm_logs')
       .select('*', { count: 'exact', head: true })
+      .eq('brand_id', brandId)
       .not('link_clicked_at', 'is', null);
+
+    const startOfMonth = new Date();
+    startOfMonth.setUTCDate(1);
+    startOfMonth.setUTCHours(0, 0, 0, 0);
+
+    const { count: monthlyDmCount } = await supabase
+      .from('share2dm_dm_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('brand_id', brandId)
+      .gte('dm_sent_at', startOfMonth.toISOString());
 
     setStats({
       totalShares: dmCount || 0,
       totalDMs: dmCount || 0,
       totalClicks: clickCount || 0,
     });
+
+    const limits = PLAN_CONFIG[brandPlan];
+    setDmUsage({
+      used: monthlyDmCount || 0,
+      limit: limits.dmPerMonth === -1 ? Infinity : limits.dmPerMonth,
+    });
   };
 
   const extractReelVideoId = (url: string): string => {
-    // Extract reel ID from Instagram URL
-    // e.g. https://www.instagram.com/reel/ABC123/ -> ABC123
     const match = url.match(/\/reel\/([^/?]+)/);
     return match ? match[1] : '';
   };
 
   const createCampaign = async () => {
+    const limits = PLAN_CONFIG[brandPlan];
+    if (limits.maxCampaigns !== -1 && campaigns.length >= limits.maxCampaigns) {
+      alert(`현재 요금제(${brandPlan})에서는 캠페인을 ${limits.maxCampaigns}개까지만 만들 수 있습니다. 업그레이드해주세요.`);
+      return;
+    }
+
     const reelVideoId = extractReelVideoId(form.reel_url);
     if (!reelVideoId) {
       alert('올바른 릴스 URL을 입력해주세요.');
       return;
     }
 
-    const { error } = await supabase.from('campaigns').insert({
+    const { error } = await supabase.from('share2dm_campaigns').insert({
       reel_url: form.reel_url,
       reel_video_id: reelVideoId,
       response_message: form.response_message,
       product_url: form.product_url,
-      brand_id: localStorage.getItem('brand_id'), // TODO: proper auth
+      brand_id: brandId,
     });
 
     if (!error) {
@@ -84,7 +138,7 @@ export default function Dashboard() {
 
   const toggleCampaign = async (id: string, isActive: boolean) => {
     await supabase
-      .from('campaigns')
+      .from('share2dm_campaigns')
       .update({ is_active: !isActive })
       .eq('id', id);
     loadCampaigns();
@@ -101,6 +155,21 @@ export default function Dashboard() {
           + 캠페인 생성
         </button>
       </header>
+
+      {/* Plan & Usage */}
+      <div style={{ border: '1px solid #eee', borderRadius: '8px', padding: '20px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{brandName}</span>
+            <PlanBadge plan={brandPlan} />
+          </div>
+          <a href="/pricing" style={{ color: '#E1306C', textDecoration: 'none', fontSize: '14px' }}>
+            요금제 변경 →
+          </a>
+        </div>
+        <UsageBar label="이번 달 DM 발송" used={dmUsage.used} limit={dmUsage.limit} />
+        <UsageBar label="캠페인" used={campaignUsage.used} limit={campaignUsage.limit} style={{ marginTop: '12px' }} />
+      </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '30px' }}>
@@ -171,6 +240,59 @@ export default function Dashboard() {
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+function PlanBadge({ plan }: { plan: PlanName }) {
+  const colors: Record<PlanName, { bg: string; text: string }> = {
+    free:     { bg: '#f0f0f0', text: '#666' },
+    standard: { bg: '#EDE9FE', text: '#7C3AED' },
+    growth:   { bg: '#DBEAFE', text: '#2563EB' },
+    pro:      { bg: '#FEF3C7', text: '#D97706' },
+  };
+  const labels: Record<PlanName, string> = {
+    free: '🌱 Free',
+    standard: '🚀 Standard',
+    growth: '📈 Growth',
+    pro: '👑 Pro',
+  };
+  const c = colors[plan];
+  return (
+    <span style={{
+      padding: '4px 12px', borderRadius: '20px', fontSize: '12px',
+      fontWeight: 'bold', backgroundColor: c.bg, color: c.text,
+    }}>
+      {labels[plan]}
+    </span>
+  );
+}
+
+function UsageBar({ label, used, limit, style }: {
+  label: string; used: number; limit: number; style?: React.CSSProperties;
+}) {
+  const isUnlimited = !isFinite(limit);
+  const pct = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
+  const isNearLimit = pct >= 80;
+  const barColor = isNearLimit ? '#EF4444' : '#7C3AED';
+
+  return (
+    <div style={style}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '14px' }}>
+        <span style={{ color: '#666' }}>{label}</span>
+        <span style={{ fontWeight: 'bold' }}>
+          {used.toLocaleString()} / {isUnlimited ? '∞' : limit.toLocaleString()}
+        </span>
+      </div>
+      <div style={{ height: '8px', backgroundColor: '#f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
+        <div style={{
+          width: isUnlimited ? '0%' : `${pct}%`,
+          height: '100%',
+          backgroundColor: barColor,
+          borderRadius: '4px',
+          transition: 'width 0.3s ease',
+        }} />
       </div>
     </div>
   );

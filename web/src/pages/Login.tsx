@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
+import { useLang } from '../lib/i18n';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const params = new URLSearchParams(window.location.search);
   const error = params.get('error');
 
@@ -33,8 +35,8 @@ export default function Login() {
             alt="share2dm"
             className="w-12 h-12 rounded-full mb-4 shadow-[0_0_20px_rgba(147,51,234,0.4)]"
           />
-          <h2 className="text-3xl font-extrabold text-white">share2dm 시작하기</h2>
-          <p className="text-gray-400 mt-2">마케팅 패러다임을 바꿀 준비가 되셨나요?</p>
+          <h2 className="text-3xl font-extrabold text-white">{t('share2dm 시작하기', 'Get Started with share2dm')}</h2>
+          <p className="text-gray-400 mt-2">{t('마케팅 패러다임을 바꿀 준비가 되셨나요?', 'Ready to change the marketing paradigm?')}</p>
         </div>
 
         <div className="bg-[#151221]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
@@ -49,31 +51,34 @@ export default function Login() {
             className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_0_20px_rgba(147,51,234,0.3)]"
           >
             <Instagram className="w-5 h-5" />
-            Instagram 비즈니스 계정 연결하기
+            {t('Instagram 비즈니스 계정 연결하기', 'Connect Instagram Business Account')}
           </button>
 
           <p className="text-center mt-6 text-xs text-gray-500">
-            Instagram 비즈니스 계정 + Facebook 페이지가 필요합니다.
+            {t('Instagram 비즈니스 계정 + Facebook 페이지가 필요합니다.', 'Requires an Instagram Business account + Facebook Page.')}
           </p>
 
           <div className="mt-8 pt-6 border-t border-white/10">
             <p className="text-center text-xs text-gray-500 leading-relaxed">
-              계속 진행하면{' '}
-              <button onClick={() => navigate('/terms/service')} className="text-purple-400 hover:text-purple-300">
-                이용약관
-              </button>
-              {' '}및{' '}
-              <button onClick={() => navigate('/terms/privacy')} className="text-purple-400 hover:text-purple-300">
-                개인정보처리방침
-              </button>
-              에 동의하는 것으로 간주됩니다.
+              {t(
+                <>계속 진행하면{' '}
+                  <button onClick={() => navigate('/terms/service')} className="text-purple-400 hover:text-purple-300">이용약관</button>
+                  {' '}및{' '}
+                  <button onClick={() => navigate('/terms/privacy')} className="text-purple-400 hover:text-purple-300">개인정보처리방침</button>
+                  에 동의하는 것으로 간주됩니다.</>,
+                <>By continuing, you agree to our{' '}
+                  <button onClick={() => navigate('/terms/service')} className="text-purple-400 hover:text-purple-300">Terms of Service</button>
+                  {' '}and{' '}
+                  <button onClick={() => navigate('/terms/privacy')} className="text-purple-400 hover:text-purple-300">Privacy Policy</button>.
+                </>
+              )}
             </p>
           </div>
         </div>
 
         <p className="text-center mt-6 text-sm text-gray-400">
           <button onClick={() => navigate('/')} className="text-purple-400 font-medium hover:text-purple-300">
-            ← 홈으로 돌아가기
+            {t('← 홈으로 돌아가기', '← Back to Home')}
           </button>
         </p>
       </div>

@@ -133,7 +133,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
     : null;
 
   const { data: brand, error } = await supabase
-    .from('brands')
+    .from('share2dm_brands')
     .upsert(
       {
         brand_name: brandName,

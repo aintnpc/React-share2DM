@@ -19,14 +19,14 @@ export async function handleTracking(
 
   // Update click timestamp
   await supabase
-    .from('dm_logs')
+    .from('share2dm_dm_logs')
     .update({ link_clicked_at: new Date().toISOString() })
     .eq('campaign_id', campaignId)
     .eq('sender_ig_id', senderIgId);
 
   // Get campaign product URL
   const { data: campaign } = await supabase
-    .from('campaigns')
+    .from('share2dm_campaigns')
     .select('product_url')
     .eq('id', campaignId)
     .single();

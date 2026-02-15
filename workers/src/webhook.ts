@@ -1,5 +1,6 @@
 import { Env, WebhookBody, MessagingEvent, Campaign, Brand } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { PLAN_CONFIG, PlanName } from './plan-config';
 
 export async function handleWebhookVerification(
   request: Request,
@@ -98,7 +99,7 @@ async function processMessagingEvent(
 
   // Get brand info
   const { data: brand } = await supabase
-    .from('brands')
+    .from('share2dm_brands')
     .select('*')
     .eq('ig_account_id', brandIgId)
     .single();
@@ -107,7 +108,7 @@ async function processMessagingEvent(
 
   // Match campaign
   const { data: campaign } = await supabase
-    .from('campaigns')
+    .from('share2dm_campaigns')
     .select('*')
     .eq('reel_video_id', reelVideoId)
     .eq('brand_id', brand.id)
@@ -118,13 +119,32 @@ async function processMessagingEvent(
 
   // Check duplicate
   const { data: existing } = await supabase
-    .from('dm_logs')
+    .from('share2dm_dm_logs')
     .select('id')
     .eq('campaign_id', campaign.id)
     .eq('sender_ig_id', senderId)
     .single();
 
   if (existing) return;
+
+  // DM limit check
+  const planLimits = PLAN_CONFIG[brand.plan as PlanName];
+  if (planLimits && planLimits.dmPerMonth !== -1) {
+    const startOfMonth = new Date();
+    startOfMonth.setUTCDate(1);
+    startOfMonth.setUTCHours(0, 0, 0, 0);
+
+    const { count } = await supabase
+      .from('share2dm_dm_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('brand_id', brand.id)
+      .gte('dm_sent_at', startOfMonth.toISOString());
+
+    if ((count ?? 0) >= planLimits.dmPerMonth) {
+      console.log(`[Webhook] DM limit reached for brand ${brand.id}: ${count}/${planLimits.dmPerMonth} (plan: ${brand.plan})`);
+      return;
+    }
+  }
 
   // Build tracking URL
   const trackingUrl = `https://share2dm.xyz/t/${campaign.id}/${senderId}`;
@@ -136,7 +156,7 @@ async function processMessagingEvent(
   await sendInstagramDM(senderId, message, brand.ig_access_token);
 
   // Log
-  await supabase.from('dm_logs').insert({
+  await supabase.from('share2dm_dm_logs').insert({
     id: crypto.randomUUID(),
     campaign_id: campaign.id,
     brand_id: brand.id,

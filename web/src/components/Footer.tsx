@@ -73,7 +73,7 @@ const Footer = () => {
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500">
           <p>&copy; 2026 share2dm. All rights reserved.</p>
           <p className="flex items-center gap-1">
-            Powered by <span className="text-gray-300 font-semibold">share2dm</span>
+            Powered by <span className="text-gray-300 font-semibold">clozet</span>
           </p>
         </div>
       </div>

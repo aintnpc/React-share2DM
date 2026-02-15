@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 
 async function handleDebugSubscriptions(env: Env): Promise<Response> {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
-  const { data: brands } = await supabase.from('brands').select('*');
+  const { data: brands } = await supabase.from('share2dm_brands').select('*');
 
   if (!brands?.length) {
     return new Response(JSON.stringify({ error: 'No brands found' }), {

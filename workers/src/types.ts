@@ -38,13 +38,15 @@ export interface Attachment {
 }
 
 // DB types
+import { PlanName } from './plan-config';
+
 export interface Brand {
   id: string;
   brand_name: string;
   ig_account_id: string;
   ig_access_token: string;
   token_expires_at: number | null;
-  plan: string;
+  plan: PlanName;
   created_at: string;
 }
 
