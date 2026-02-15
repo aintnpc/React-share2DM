@@ -172,6 +172,9 @@ export async function handleOAuthCallbackGet(
 
   try {
     const redirectUri = `${url.origin}/auth/callback`;
+    console.log('[OAuth] request.url:', request.url);
+    console.log('[OAuth] url.origin:', url.origin);
+    console.log('[OAuth] redirectUri for token exchange:', redirectUri);
     const brand = await processOAuth(code, redirectUri, env);
 
     const params = new URLSearchParams({
