@@ -87,33 +87,70 @@ async function handleDebugSubscriptions(env: Env): Promise<Response> {
   });
 }
 
-async function handleOembed(url: URL, env: Env): Promise<Response> {
+// /media-id?brand_id=...&url=... → brand의 access token으로 media 조회 → ig_contents_id 반환
+async function handleMediaId(url: URL, env: Env): Promise<Response> {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET',
     'Content-Type': 'application/json',
   };
 
+  const brandId = url.searchParams.get('brand_id');
   const igUrl = url.searchParams.get('url');
-  if (!igUrl) {
-    return new Response(JSON.stringify({ error: 'url parameter required' }), { status: 400, headers });
+
+  if (!brandId || !igUrl) {
+    return new Response(JSON.stringify({ error: 'brand_id and url required' }), { status: 400, headers });
+  }
+
+  // shortcode 추출
+  const shortcodeMatch = igUrl.match(/\/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+  const shortcode = shortcodeMatch?.[1];
+  if (!shortcode) {
+    return new Response(JSON.stringify({ error: 'invalid instagram url' }), { status: 400, headers });
   }
 
   try {
-    const appToken = `${env.META_APP_ID}|${env.META_APP_SECRET}`;
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/instagram_oembed?url=${encodeURIComponent(igUrl)}&access_token=${appToken}`
-    );
-    const data: any = await res.json();
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+    const { data: brand } = await supabase
+      .from('share2dm_brands')
+      .select('ig_account_id, ig_access_token')
+      .eq('id', brandId)
+      .single();
 
-    if (data.error) {
-      console.log('[oEmbed] error:', JSON.stringify(data.error));
-      return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers });
+    if (!brand) {
+      return new Response(JSON.stringify({ error: 'brand not found' }), { status: 404, headers });
     }
 
-    return new Response(JSON.stringify({ media_id: data.media_id || null }), { status: 200, headers });
+    // brand의 media 목록에서 shortcode 매칭
+    let mediaId: string | null = null;
+    let nextUrl: string | null =
+      `https://graph.facebook.com/v21.0/${brand.ig_account_id}/media?fields=id,shortcode&limit=50&access_token=${brand.ig_access_token}`;
+
+    while (nextUrl && !mediaId) {
+      const res = await fetch(nextUrl);
+      const data: any = await res.json();
+
+      if (data.error) {
+        console.log('[media-id] graph error:', JSON.stringify(data.error));
+        return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers });
+      }
+
+      const match = data.data?.find((m: any) => m.shortcode === shortcode);
+      if (match) {
+        mediaId = match.id;
+      } else {
+        nextUrl = data.paging?.next || null;
+      }
+    }
+
+    if (!mediaId) {
+      return new Response(JSON.stringify({ error: 'media not found for this shortcode' }), { status: 404, headers });
+    }
+
+    console.log('[media-id] shortcode:', shortcode, '→ media_id:', mediaId);
+    return new Response(JSON.stringify({ media_id: mediaId }), { status: 200, headers });
   } catch (e: any) {
-    console.log('[oEmbed] failed:', e.message);
+    console.log('[media-id] failed:', e.message);
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
   }
 }
@@ -160,9 +197,9 @@ export default {
         return handleTracking(request, env);
       }
 
-      // oEmbed proxy: Instagram URL → media_id (GET /oembed?url=...)
-      if (url.pathname === '/oembed' && request.method === 'GET') {
-        return handleOembed(url, env);
+      // media-id: brand의 access token으로 shortcode → media_id (GET /media-id?brand_id=...&url=...)
+      if (url.pathname === '/media-id' && request.method === 'GET') {
+        return handleMediaId(url, env);
       }
 
       // Debug: check & resubscribe page webhooks (GET /debug/subscriptions)

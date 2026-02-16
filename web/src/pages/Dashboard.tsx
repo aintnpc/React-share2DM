@@ -127,7 +127,7 @@ export default function Dashboard() {
     let reelVideoId: string;
     try {
       const res = await fetch(
-        `https://share2dm-webhook.share2dm.workers.dev/oembed?url=${encodeURIComponent(form.reel_url)}`
+        `https://share2dm-webhook.share2dm.workers.dev/media-id?brand_id=${brandId}&url=${encodeURIComponent(form.reel_url)}`
       );
       const data = await res.json() as { media_id?: string; error?: string };
       if (!data.media_id) {

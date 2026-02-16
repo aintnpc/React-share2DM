@@ -211,16 +211,16 @@ async function sendInstagramDM(
   accessToken: string
 ): Promise<void> {
   const response = await fetch(
-    `https://graph.instagram.com/v21.0/me/messages`,
+    `https://graph.facebook.com/v21.0/me/messages`,
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         recipient: { id: recipientId },
         message: { text: message },
+        access_token: accessToken,
       }),
     }
   );
