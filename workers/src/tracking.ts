@@ -35,6 +35,9 @@ export async function handleTracking(
     return new Response('Not found', { status: 404 });
   }
 
-  // Redirect to actual product URL
-  return Response.redirect(campaign.product_url, 302);
+  // Redirect to actual product URL (ensure absolute URL)
+  const productUrl = campaign.product_url.startsWith('http')
+    ? campaign.product_url
+    : `https://${campaign.product_url}`;
+  return Response.redirect(productUrl, 302);
 }

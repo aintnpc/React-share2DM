@@ -55,6 +55,9 @@ export interface Brand {
   token_expires_at: number | null;
   plan: PlanName;
   created_at: string;
+  clozet_seller_id: string | null;
+  clozet_store_name: string | null;
+  clozet_connected_at: string | null;
 }
 
 export interface Campaign {

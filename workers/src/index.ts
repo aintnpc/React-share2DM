@@ -2,6 +2,7 @@ import { Env } from './types';
 import { handleWebhookVerification, handleWebhookEvent } from './webhook';
 import { handleTracking } from './tracking';
 import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
+import { handleClozetCallback, handleClozetContentLookup } from './clozet';
 import { createClient } from '@supabase/supabase-js';
 
 async function handleDebugSubscriptions(env: Env): Promise<Response> {
@@ -200,6 +201,16 @@ export default {
       // media-id: brand의 access token으로 shortcode → media_id (GET /media-id?brand_id=...&url=...)
       if (url.pathname === '/media-id' && request.method === 'GET') {
         return handleMediaId(url, env);
+      }
+
+      // Clozet B.O에서 연결 완료 후 리다이렉트 (GET /auth/clozet/callback?token=...&brand_id=...&state=...&origin=...)
+      if (url.pathname === '/auth/clozet/callback' && request.method === 'GET') {
+        return handleClozetCallback(request, env);
+      }
+
+      // 캠페인 생성 시 Clozet 콘텐츠 조회 (GET /clozet/contents?brand_id=...&ig_code=...)
+      if (url.pathname === '/clozet/contents' && request.method === 'GET') {
+        return handleClozetContentLookup(url, env);
       }
 
       // Debug: check & resubscribe page webhooks (GET /debug/subscriptions)
