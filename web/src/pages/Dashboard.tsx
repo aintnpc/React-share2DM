@@ -5,7 +5,7 @@ import { PLAN_CONFIG, PlanName } from '../lib/plan-config';
 interface Campaign {
   id: string;
   reel_url: string;
-  reel_video_id: string;
+  ig_contents_id: string;
   response_message: string;
   product_url: string;
   is_active: boolean;
@@ -103,9 +103,12 @@ export default function Dashboard() {
     loadStats();
   }, [brandId, brandPlan, loadCampaigns, loadStats]);
 
-  const extractReelVideoId = (url: string): string => {
-    const match = url.match(/\/reel\/([^/?]+)/);
-    return match ? match[1] : '';
+  const extractShortCode = (link: string): string => {
+    const reelMatch = link.match(/\/reel\/([A-Za-z0-9_-]+)/);
+    if (reelMatch) return reelMatch[1];
+    const postMatch = link.match(/\/p\/([A-Za-z0-9_-]+)/);
+    if (postMatch) return postMatch[1];
+    return '';
   };
 
   const createCampaign = async () => {
@@ -115,19 +118,42 @@ export default function Dashboard() {
       return;
     }
 
-    const reelVideoId = extractReelVideoId(form.reel_url);
-    if (!reelVideoId) {
-      alert('올바른 릴스 URL을 입력해주세요.');
+    const shortCode = extractShortCode(form.reel_url);
+    if (!shortCode) {
+      alert('올바른 릴스 또는 포스트 URL을 입력해주세요.');
+      return;
+    }
+
+    let reelVideoId: string;
+    try {
+      const res = await fetch(
+        `https://share2dm-webhook.share2dm.workers.dev/oembed?url=${encodeURIComponent(form.reel_url)}`
+      );
+      const data = await res.json() as { media_id?: string; error?: string };
+      if (!data.media_id) {
+        alert(`미디어 ID를 가져올 수 없습니다: ${data.error ?? '알 수 없는 오류'}`);
+        return;
+      }
+      reelVideoId = data.media_id;
+    } catch {
+      alert('미디어 ID 조회 중 오류가 발생했습니다.');
       return;
     }
 
     const { error } = await supabase.from('share2dm_campaigns').insert({
       reel_url: form.reel_url,
-      reel_video_id: reelVideoId,
+      ig_contents_id: reelVideoId,
+      short_code: shortCode,
       response_message: form.response_message,
       product_url: form.product_url,
       brand_id: brandId,
     });
+
+    if (error) {
+      console.error('[Campaign] insert error:', error);
+      alert(`캠페인 생성 실패: ${error.message}`);
+      return;
+    }
 
     if (!error) {
       setForm({ reel_url: '', response_message: '', product_url: '' });

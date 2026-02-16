@@ -12,4 +12,5 @@ invocation_logs = true
 
 [vars]
 ENVIRONMENT = "production"
+META_APP_ID = "2268925113628811"
 META_APP_SECRET = "b187c2e7f226baa8c8a3ee00e598bd27"

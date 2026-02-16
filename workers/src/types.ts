@@ -12,10 +12,16 @@ export interface WebhookBody {
   entry: WebhookEntry[];
 }
 
+export interface WebhookChange {
+  field: string;
+  value: MessagingEvent;
+}
+
 export interface WebhookEntry {
   id: string; // Brand's IG account ID
   time: number;
   messaging: MessagingEvent[];
+  changes: WebhookChange[];
 }
 
 export interface MessagingEvent {
@@ -26,6 +32,7 @@ export interface MessagingEvent {
     mid: string;
     text?: string;
     attachments?: Attachment[];
+    is_echo?: boolean;
   };
 }
 
@@ -54,7 +61,8 @@ export interface Campaign {
   id: string;
   brand_id: string;
   reel_url: string;
-  reel_video_id: string;
+  ig_contents_id: string;
+  short_code: string | null;
   response_message: string;
   product_url: string;
   is_active: boolean;
@@ -66,7 +74,7 @@ export interface DmLog {
   campaign_id: string;
   brand_id: string;
   sender_ig_id: string;
-  reel_video_id: string;
+  ig_contents_id: string;
   dm_sent_at: string;
   link_clicked_at: string | null;
 }

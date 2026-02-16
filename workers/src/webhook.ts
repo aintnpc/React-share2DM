@@ -1,4 +1,4 @@
-import { Env, WebhookBody, MessagingEvent, Campaign, Brand } from './types';
+import { Env, WebhookBody, MessagingEvent } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PLAN_CONFIG, PlanName } from './plan-config';
 
@@ -49,7 +49,7 @@ export async function handleWebhookEvent(
 
   console.log('[Webhook] object:', payload.object, 'entries:', payload.entry?.length);
 
-  if (payload.object !== 'instagram') {
+  if (payload.object !== 'instagram' && payload.object !== 'page') {
     return new Response('OK', { status: 200 });
   }
 
@@ -59,9 +59,23 @@ export async function handleWebhookEvent(
       const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
       for (const entry of payload.entry) {
         const brandIgId = entry.id;
-        console.log('[Webhook] Processing entry for brand:', brandIgId, 'messaging events:', entry.messaging?.length);
-        for (const event of entry.messaging || []) {
-          await processMessagingEvent(event, brandIgId, supabase);
+
+        // Format 1: entry.messaging[] (Messenger Platform)
+        if (entry.messaging?.length) {
+          console.log('[Webhook] messaging format, events:', entry.messaging.length);
+          for (const event of entry.messaging) {
+            await processMessagingEvent(event, brandIgId, supabase);
+          }
+        }
+
+        // Format 2: entry.changes[].value (Instagram Platform)
+        if (entry.changes?.length) {
+          console.log('[Webhook] changes format, changes:', entry.changes.length);
+          for (const change of entry.changes) {
+            if (change.field === 'messages' && change.value) {
+              await processMessagingEvent(change.value as MessagingEvent, brandIgId, supabase);
+            }
+          }
         }
       }
     } catch (err) {
@@ -83,19 +97,39 @@ async function processMessagingEvent(
   brandIgId: string,
   supabase: SupabaseClient
 ): Promise<void> {
-  if (!event.message?.attachments) return;
+  console.log('[DM] event:', JSON.stringify(event));
+
+  if (event.message?.is_echo) {
+    console.log('[DM] Echo message, skip');
+    return;
+  }
+
+  if (!event.message?.attachments) {
+    console.log('[DM] No attachments, skip');
+    return;
+  }
+
+  console.log('[DM] attachments:', JSON.stringify(event.message.attachments));
 
   // Find reel attachment
   const reelAttachment = event.message.attachments.find(
     (a) => a.type === 'ig_reel'
   );
 
-  if (!reelAttachment) return;
+  if (!reelAttachment) {
+    console.log('[DM] No ig_reel attachment, skip');
+    return;
+  }
 
   const reelVideoId = reelAttachment.payload.reel_video_id;
   const senderId = event.sender.id;
 
-  if (!reelVideoId) return;
+  console.log('[DM] reelVideoId:', reelVideoId, 'senderId:', senderId);
+
+  if (!reelVideoId) {
+    console.log('[DM] No reelVideoId, skip');
+    return;
+  }
 
   // Get brand info
   const { data: brand } = await supabase
@@ -104,16 +138,20 @@ async function processMessagingEvent(
     .eq('ig_account_id', brandIgId)
     .single();
 
+  console.log('[DM] brand lookup brandIgId:', brandIgId, '→', brand?.id ?? 'NOT FOUND');
+
   if (!brand) return;
 
   // Match campaign
   const { data: campaign } = await supabase
     .from('share2dm_campaigns')
     .select('*')
-    .eq('reel_video_id', reelVideoId)
+    .eq('ig_contents_id', reelVideoId)
     .eq('brand_id', brand.id)
     .eq('is_active', true)
     .single();
+
+  console.log('[DM] campaign lookup reelVideoId:', reelVideoId, '→', campaign?.id ?? 'NOT FOUND');
 
   if (!campaign) return;
 
@@ -124,6 +162,8 @@ async function processMessagingEvent(
     .eq('campaign_id', campaign.id)
     .eq('sender_ig_id', senderId)
     .single();
+
+  console.log('[DM] duplicate check:', existing ? 'DUPLICATE, skip' : 'new');
 
   if (existing) return;
 
@@ -161,7 +201,7 @@ async function processMessagingEvent(
     campaign_id: campaign.id,
     brand_id: brand.id,
     sender_ig_id: senderId,
-    reel_video_id: reelVideoId,
+    ig_contents_id: reelVideoId,
   });
 }
 
@@ -185,9 +225,11 @@ async function sendInstagramDM(
     }
   );
 
+  const result = await response.text();
   if (!response.ok) {
-    const error = await response.text();
-    console.error(`DM send failed: ${error}`);
+    console.error(`[DM] send failed (${response.status}): ${result}`);
+  } else {
+    console.log(`[DM] send success:`, result);
   }
 }
 

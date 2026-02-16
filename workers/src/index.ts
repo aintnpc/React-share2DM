@@ -87,6 +87,37 @@ async function handleDebugSubscriptions(env: Env): Promise<Response> {
   });
 }
 
+async function handleOembed(url: URL, env: Env): Promise<Response> {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET',
+    'Content-Type': 'application/json',
+  };
+
+  const igUrl = url.searchParams.get('url');
+  if (!igUrl) {
+    return new Response(JSON.stringify({ error: 'url parameter required' }), { status: 400, headers });
+  }
+
+  try {
+    const appToken = `${env.META_APP_ID}|${env.META_APP_SECRET}`;
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/instagram_oembed?url=${encodeURIComponent(igUrl)}&access_token=${appToken}`
+    );
+    const data: any = await res.json();
+
+    if (data.error) {
+      console.log('[oEmbed] error:', JSON.stringify(data.error));
+      return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers });
+    }
+
+    return new Response(JSON.stringify({ media_id: data.media_id || null }), { status: 200, headers });
+  } catch (e: any) {
+    console.log('[oEmbed] failed:', e.message);
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -127,6 +158,11 @@ export default {
       // Click tracking redirect (GET /t/{campaign_id}/{sender_ig_id})
       if (url.pathname.startsWith('/t/') && request.method === 'GET') {
         return handleTracking(request, env);
+      }
+
+      // oEmbed proxy: Instagram URL → media_id (GET /oembed?url=...)
+      if (url.pathname === '/oembed' && request.method === 'GET') {
+        return handleOembed(url, env);
       }
 
       // Debug: check & resubscribe page webhooks (GET /debug/subscriptions)
