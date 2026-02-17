@@ -5,7 +5,6 @@ import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { PlanName } from '../lib/plan-config';
 
 const TOSS_CLIENT_KEY = process.env.REACT_APP_TOSS_CLIENT_KEY ?? '';
-const WORKERS_URL = process.env.REACT_APP_WORKERS_URL ?? 'https://share2dm-webhook.share2dm.workers.dev';
 
 async function requestBilling(plan: PlanName, brandId: string) {
   const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY);
