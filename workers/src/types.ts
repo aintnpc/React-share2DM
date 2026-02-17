@@ -4,6 +4,7 @@ export interface Env {
   META_APP_ID: string;
   META_APP_SECRET: string;
   META_VERIFY_TOKEN: string;
+  TOSS_SECRET_KEY: string;
 }
 
 // Instagram Webhook payload types

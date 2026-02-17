@@ -131,12 +131,11 @@ export async function handleClozetContentLookup(url: URL, env: Env): Promise<Res
     });
   }
 
-  // ig_contents_code로 Clozet contents 테이블 직접 조회
+  // short_code로 Clozet contents 테이블 직접 조회 (short_code는 UNIQUE)
   const { data: content, error } = await supabase
     .from('contents')
     .select('id, short_code, ig_contents_code, store_name')
-    .eq('ig_contents_code', igCode)
-    .eq('store_name', brand.clozet_store_name) // 해당 브랜드 콘텐츠만
+    .eq('short_code', igCode)
     .single();
 
   if (error || !content) {

@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/Home';
 import Pricing from './pages/Pricing';
+import BillingSuccess from './pages/BillingSuccess';
+import BillingFail from './pages/BillingFail';
 import ServiceTerms from './pages/terms/ServiceTerms';
 import PrivacyPolicy from './pages/terms/PrivacyPolicy';
 import LandingLayout from './layouts/LandingLayout';
@@ -26,6 +28,8 @@ function App() {
         {/* App pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/billing/success" element={<BillingSuccess />} />
+        <Route path="/billing/fail" element={<BillingFail />} />
         <Route
           path="/dashboard"
           element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}

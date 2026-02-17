@@ -29,12 +29,37 @@ CREATE INDEX IF NOT EXISTS idx_share2dm_connect_tokens_expires
 -- RLS: Clozet B.O 프론트엔드(anon key)가 자신의 seller_profile에 대해서만 INSERT 가능
 ALTER TABLE public.share2dm_connect_tokens ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "seller can insert own connect token"
-  ON public.share2dm_connect_tokens
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    seller_profile_id IN (
-      SELECT id FROM public.seller_profile WHERE user_id = auth.uid()
-    )
-  );
+-- RPC: 토큰 생성 (RLS 우회, 내부에서 auth.uid() 기반으로 seller_profile 검증)
+CREATE OR REPLACE FUNCTION public.create_share2dm_connect_token(p_brand_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid       uuid := auth.uid();
+  v_seller_id uuid;
+  v_token     uuid;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not authenticated';
+  END IF;
+
+  SELECT id INTO v_seller_id
+  FROM seller_profile
+  WHERE user_id = v_uid;
+
+  IF v_seller_id IS NULL THEN
+    RAISE EXCEPTION 'seller profile not found';
+  END IF;
+
+  INSERT INTO share2dm_connect_tokens (seller_profile_id, share2dm_brand_id)
+  VALUES (v_seller_id, p_brand_id)
+  RETURNING token INTO v_token;
+
+  RETURN v_token;
+END;
+$$;
+
+-- RLS: INSERT는 RPC를 통해서만 허용 (직접 INSERT 차단)
+ALTER TABLE public.share2dm_connect_tokens ENABLE ROW LEVEL SECURITY;

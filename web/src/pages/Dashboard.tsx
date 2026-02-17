@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { PLAN_CONFIG, PlanName } from '../lib/plan-config';
 
 const WORKERS_URL = process.env.REACT_APP_WORKERS_URL ?? 'https://share2dm-webhook.share2dm.workers.dev';
-const CLOZET_BO_URL = process.env.REACT_APP_CLOZET_BO_URL ?? 'https://clozet.my/login';
+const CLOZET_BO_URL = process.env.REACT_APP_CLOZET_BO_URL ?? 'https://clozet.my';
 
 interface Campaign {
   id: string;
@@ -42,6 +42,9 @@ export default function Dashboard() {
   const [campaignUsage, setCampaignUsage] = useState({ used: 0, limit: 1 });
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ reel_url: '', response_message: '', product_url: '' });
+
+  // 구독 결제 상태
+  const [billingCardLast4, setBillingCardLast4] = useState<string | null>(null);
 
   // Clozet 연결 상태
   const [clozetStoreName, setClozetStoreName] = useState<string | null>(null);
@@ -82,12 +85,13 @@ export default function Dashboard() {
   const loadBrandInfo = useCallback(async () => {
     const { data } = await supabase
       .from('share2dm_brands')
-      .select('plan, clozet_store_name, clozet_connected_at')
+      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4')
       .eq('id', brandId)
       .single();
     if (data) {
       setBrandPlan(data.plan as PlanName);
       setClozetStoreName(data.clozet_store_name ?? null);
+      setBillingCardLast4(data.billing_card_last4 ?? null);
     }
   }, [brandId]);
 
@@ -280,6 +284,14 @@ export default function Dashboard() {
     loadCampaigns();
   };
 
+  const deleteCampaign = async (id: string) => {
+    if (!window.confirm('캠페인을 삭제하시겠습니까? DM 발송 기록도 함께 삭제됩니다.')) return;
+    await supabase.from('share2dm_dm_logs').delete().eq('campaign_id', id);
+    await supabase.from('share2dm_campaigns').delete().eq('id', id);
+    loadCampaigns();
+    loadStats();
+  };
+
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
@@ -298,6 +310,11 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{brandName}</span>
             <PlanBadge plan={brandPlan} />
+            {billingCardLast4 && (
+              <span style={{ fontSize: '12px', color: '#888', padding: '3px 8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                💳 ****{billingCardLast4}
+              </span>
+            )}
           </div>
           <a href="/pricing" style={{ color: '#E1306C', textDecoration: 'none', fontSize: '14px' }}>
             요금제 변경 →
@@ -434,20 +451,36 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => toggleCampaign(c.id, c.is_active)}
-                  style={{
-                    padding: '6px 16px',
-                    backgroundColor: c.is_active ? '#4CAF50' : '#ccc',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '20px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                  }}
-                >
-                  {c.is_active ? 'ON' : 'OFF'}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={() => toggleCampaign(c.id, c.is_active)}
+                    style={{
+                      padding: '6px 16px',
+                      backgroundColor: c.is_active ? '#4CAF50' : '#ccc',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '20px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    {c.is_active ? 'ON' : 'OFF'}
+                  </button>
+                  <button
+                    onClick={() => deleteCampaign(c.id)}
+                    style={{
+                      padding: '6px 10px',
+                      backgroundColor: 'white',
+                      color: '#999',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
               </div>
             </div>
           ))

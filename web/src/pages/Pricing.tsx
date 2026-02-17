@@ -1,10 +1,42 @@
 import { useNavigate } from 'react-router-dom';
 import { Check, Lock } from 'lucide-react';
 import { useLang } from '../lib/i18n';
+import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
+import { PlanName } from '../lib/plan-config';
+
+const TOSS_CLIENT_KEY = process.env.REACT_APP_TOSS_CLIENT_KEY ?? '';
+const WORKERS_URL = process.env.REACT_APP_WORKERS_URL ?? 'https://share2dm-webhook.share2dm.workers.dev';
+
+async function requestBilling(plan: PlanName, brandId: string) {
+  const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY);
+  const customerKey = `share2dm_${brandId}`;
+  const payment = tossPayments.payment({ customerKey });
+
+  await payment.requestBillingAuth({
+    method: 'CARD',
+    successUrl: `${window.location.origin}/billing/success?plan=${plan}&brand_id=${brandId}`,
+    failUrl: `${window.location.origin}/billing/fail`,
+    customerEmail: '',
+    customerName: '',
+  });
+}
 
 const Pricing = () => {
   const navigate = useNavigate();
   const { t } = useLang();
+
+  const handlePlanSelect = (plan: PlanName) => {
+    const brandId = localStorage.getItem('brand_id');
+    if (!brandId) {
+      navigate('/login');
+      return;
+    }
+    if (plan === 'free') {
+      navigate('/dashboard');
+      return;
+    }
+    requestBilling(plan, brandId);
+  };
 
   return (
     <div className="min-h-screen pt-32 pb-24 px-6 relative bg-[#0B0914] flex flex-col items-center">
@@ -37,7 +69,7 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Lock className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet 입점 강제', 'Clozet store only')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 8%', 'Platform fee 8%')}</span></li>
           </ul>
-          <button onClick={() => navigate('/login')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
+          <button onClick={() => handlePlanSelect('free')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
             {t('무료로 시작', 'Start Free')}
           </button>
         </div>
@@ -61,7 +93,7 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Lock className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('Clozet 입점 강제', 'Clozet store only')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('플랫폼 수수료 8%', 'Platform fee 8%')}</span></li>
           </ul>
-          <button onClick={() => navigate('/login')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20">
+          <button onClick={() => handlePlanSelect('standard')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20">
             {t('시작하기', 'Get Started')}
           </button>
         </div>
@@ -82,7 +114,7 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Lock className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet 입점 강제', 'Clozet store only')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 7%', 'Platform fee 7%')}</span></li>
           </ul>
-          <button onClick={() => navigate('/login')} className="w-full py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors">
+          <button onClick={() => handlePlanSelect('growth')} className="w-full py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors">
             {t('시작하기', 'Get Started')}
           </button>
         </div>
@@ -103,8 +135,8 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-green-400 shrink-0" /><span className="text-green-400 text-sm font-medium">{t('자사몰(D2C) 자유 연결', 'Connect your own D2C store')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 6%', 'Platform fee 6%')}</span></li>
           </ul>
-          <button onClick={() => navigate('/login')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
-            {t('문의하기', 'Contact Us')}
+          <button onClick={() => handlePlanSelect('pro')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
+            {t('시작하기', 'Get Started')}
           </button>
         </div>
       </div>

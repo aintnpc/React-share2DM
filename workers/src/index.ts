@@ -3,6 +3,7 @@ import { handleWebhookVerification, handleWebhookEvent } from './webhook';
 import { handleTracking } from './tracking';
 import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
 import { handleClozetCallback, handleClozetContentLookup } from './clozet';
+import { handleIssueBillingKey } from './billing';
 import { createClient } from '@supabase/supabase-js';
 
 async function handleDebugSubscriptions(env: Env): Promise<Response> {
@@ -211,6 +212,11 @@ export default {
       // 캠페인 생성 시 Clozet 콘텐츠 조회 (GET /clozet/contents?brand_id=...&ig_code=...)
       if (url.pathname === '/clozet/contents' && request.method === 'GET') {
         return handleClozetContentLookup(url, env);
+      }
+
+      // 토스페이먼츠 빌링키 발급 (POST /billing/issue-billing-key)
+      if (url.pathname === '/billing/issue-billing-key' && request.method === 'POST') {
+        return handleIssueBillingKey(request, env);
       }
 
       // Debug: check & resubscribe page webhooks (GET /debug/subscriptions)
