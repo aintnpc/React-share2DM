@@ -3,7 +3,7 @@ import { handleWebhookVerification, handleWebhookEvent } from './webhook';
 import { handleTracking } from './tracking';
 import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
 import { handleClozetCallback, handleClozetContentLookup } from './clozet';
-import { handleIssueBillingKey } from './billing';
+import { handleIssueBillingKey, handleBillingCron } from './billing';
 import { createClient } from '@supabase/supabase-js';
 
 async function handleDebugSubscriptions(env: Env): Promise<Response> {
@@ -236,5 +236,10 @@ export default {
       console.error('[Worker] Unhandled error:', error);
       return new Response('Internal Server Error', { status: 500 });
     }
+  },
+
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    console.log('[Cron] Billing cron triggered');
+    await handleBillingCron(env);
   },
 };
