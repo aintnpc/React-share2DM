@@ -186,50 +186,26 @@ async function processMessagingEvent(
     }
   }
 
-  // Build tracking URL
-  const trackingUrl = `https://share2dm.xyz/t/${campaign.id}/${senderId}`;
-
-  // Build message
+  // Build tracking URL and message
+  const trackingUrl = `https://share2dm-webhook.share2dm.workers.dev/t/${campaign.id}/${senderId}`;
   const message = `${campaign.response_message}\n\n${trackingUrl}`;
 
-  // Send DM
-  await sendInstagramDM(senderId, message, brand.ig_access_token);
-
-  // Log
-  await supabase.from('share2dm_dm_logs').insert({
+  // Enqueue DM (will be processed by cron with rate limiting)
+  const { error: queueError } = await supabase.from('share2dm_dm_queue').insert({
     id: crypto.randomUUID(),
-    campaign_id: campaign.id,
     brand_id: brand.id,
+    campaign_id: campaign.id,
     sender_ig_id: senderId,
     ig_contents_id: reelVideoId,
+    message,
+    access_token: brand.ig_access_token,
+    status: 'pending',
   });
-}
 
-async function sendInstagramDM(
-  recipientId: string,
-  message: string,
-  accessToken: string
-): Promise<void> {
-  const response = await fetch(
-    `https://graph.facebook.com/v21.0/me/messages`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        recipient: { id: recipientId },
-        message: { text: message },
-        access_token: accessToken,
-      }),
-    }
-  );
-
-  const result = await response.text();
-  if (!response.ok) {
-    console.error(`[DM] send failed (${response.status}): ${result}`);
+  if (queueError) {
+    console.error(`[DM] queue insert failed:`, queueError);
   } else {
-    console.log(`[DM] send success:`, result);
+    console.log(`[DM] queued for ${senderId} (campaign: ${campaign.id})`);
   }
 }
 

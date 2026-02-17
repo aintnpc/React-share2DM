@@ -17,4 +17,4 @@ META_APP_SECRET = "b187c2e7f226baa8c8a3ee00e598bd27"
 CLOZET_BO_URL = "https://clozet.my"
 
 [triggers]
-crons = ["0 0 * * *"]  # 매일 UTC 00:00 (KST 09:00)
+crons = ["*/1 * * * *", "0 0 * * *"]  # 매분: DM 큐 처리, 매일 00:00 UTC: 빌링

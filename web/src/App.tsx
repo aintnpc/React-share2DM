@@ -10,6 +10,7 @@ import BillingSuccess from './pages/BillingSuccess';
 import BillingFail from './pages/BillingFail';
 import ServiceTerms from './pages/terms/ServiceTerms';
 import PrivacyPolicy from './pages/terms/PrivacyPolicy';
+import Admin from './pages/Admin';
 import LandingLayout from './layouts/LandingLayout';
 
 function App() {
@@ -34,6 +35,9 @@ function App() {
           path="/dashboard"
           element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}
         />
+
+        {/* Admin */}
+        <Route path="/admin" element={<Admin />} />
 
         {/* Terms */}
         <Route path="/terms/service" element={<ServiceTerms />} />

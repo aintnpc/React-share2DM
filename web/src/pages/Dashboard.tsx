@@ -18,10 +18,13 @@ interface Campaign {
   created_at: string;
 }
 
-interface Stats {
-  totalShares: number;
-  totalDMs: number;
-  totalClicks: number;
+interface CampaignStats {
+  shares: number; // dm_logs count (= shares that triggered DM)
+  dmsSent: number; // dm_logs count (same as shares for now)
+  clicks: number; // link_clicked_at IS NOT NULL count
+  queuePending: number;
+  queueSending: number;
+  queueTotal: number; // pending + sending + sent + failed
 }
 
 interface ClozetContent {
@@ -36,32 +39,25 @@ export default function Dashboard() {
   const brandName = localStorage.getItem('brand_name') || 'My Brand';
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [stats, setStats] = useState<Stats>({ totalShares: 0, totalDMs: 0, totalClicks: 0 });
+  const [campaignStats, setCampaignStats] = useState<Record<string, CampaignStats>>({});
   const [brandPlan, setBrandPlan] = useState<PlanName>('free');
   const [dmUsage, setDmUsage] = useState({ used: 0, limit: 1000 });
   const [campaignUsage, setCampaignUsage] = useState({ used: 0, limit: 1 });
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ reel_url: '', response_message: '', product_url: '' });
 
-  // 구독 결제 상태
   const [billingCardLast4, setBillingCardLast4] = useState<string | null>(null);
-
-  // Clozet 연결 상태
   const [clozetStoreName, setClozetStoreName] = useState<string | null>(null);
   const [clozetConnecting, setClozetConnecting] = useState(false);
-
-  // 캠페인 생성 중 Clozet 콘텐츠 조회 결과
   const [clozetContent, setClozetContent] = useState<ClozetContent | null>(null);
   const [clozetLookingUp, setClozetLookingUp] = useState(false);
 
-  // Clozet 콜백 처리 (대시보드 진입 시 ?clozet_connected=true 파라미터 확인)
+  // Clozet 콜백 처리
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('clozet_connected') === 'true') {
       const storeName = params.get('clozet_store');
       const state = params.get('state') ?? '';
-
-      // sessionStorage에 저장한 nonce와 비교 (CSRF 방지)
       const savedState = sessionStorage.getItem('clozet_connect_state');
       if (savedState && savedState !== state) {
         console.warn('[Clozet] state mismatch — possible CSRF');
@@ -69,10 +65,7 @@ export default function Dashboard() {
         if (storeName) setClozetStoreName(decodeURIComponent(storeName));
       }
       sessionStorage.removeItem('clozet_connect_state');
-
-      // URL에서 쿼리 파라미터 제거
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, '', cleanUrl);
+      window.history.replaceState({}, '', window.location.pathname);
     }
 
     const error = params.get('clozet_error');
@@ -111,18 +104,58 @@ export default function Dashboard() {
     }
   }, [brandId, brandPlan]);
 
-  const loadStats = useCallback(async () => {
-    const { count: dmCount } = await supabase
-      .from('share2dm_dm_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('brand_id', brandId);
+  const loadCampaignStats = useCallback(async () => {
+    if (!campaigns.length) {
+      setCampaignStats({});
+      return;
+    }
 
-    const { count: clickCount } = await supabase
-      .from('share2dm_dm_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('brand_id', brandId)
-      .not('link_clicked_at', 'is', null);
+    const stats: Record<string, CampaignStats> = {};
 
+    for (const c of campaigns) {
+      // DM logs = shares (each unique share triggers a DM log)
+      const { count: dmCount } = await supabase
+        .from('share2dm_dm_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('campaign_id', c.id);
+
+      // Clicks
+      const { count: clickCount } = await supabase
+        .from('share2dm_dm_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('campaign_id', c.id)
+        .not('link_clicked_at', 'is', null);
+
+      // Queue status
+      let queuePending = 0;
+      let queueSending = 0;
+      let queueTotal = 0;
+      try {
+        const res = await fetch(
+          `${WORKERS_URL}/queue/status?brand_id=${brandId}&campaign_id=${c.id}`
+        );
+        const qData = await res.json() as any;
+        queuePending = qData.queue?.pending ?? 0;
+        queueSending = qData.queue?.sending ?? 0;
+        queueTotal = qData.total ?? 0;
+      } catch {
+        // ignore
+      }
+
+      stats[c.id] = {
+        shares: (dmCount ?? 0) + queuePending + queueSending,
+        dmsSent: dmCount ?? 0,
+        clicks: clickCount ?? 0,
+        queuePending,
+        queueSending,
+        queueTotal,
+      };
+    }
+
+    setCampaignStats(stats);
+  }, [campaigns, brandId]);
+
+  const loadDmUsage = useCallback(async () => {
     const startOfMonth = new Date();
     startOfMonth.setUTCDate(1);
     startOfMonth.setUTCHours(0, 0, 0, 0);
@@ -132,12 +165,6 @@ export default function Dashboard() {
       .select('*', { count: 'exact', head: true })
       .eq('brand_id', brandId)
       .gte('dm_sent_at', startOfMonth.toISOString());
-
-    setStats({
-      totalShares: dmCount || 0,
-      totalDMs: dmCount || 0,
-      totalClicks: clickCount || 0,
-    });
 
     const limits = PLAN_CONFIG[brandPlan];
     setDmUsage({
@@ -154,29 +181,51 @@ export default function Dashboard() {
   useEffect(() => {
     if (!brandId) return;
     loadCampaigns();
-    loadStats();
-  }, [brandId, brandPlan, loadCampaigns, loadStats]);
+    loadDmUsage();
+  }, [brandId, brandPlan, loadCampaigns, loadDmUsage]);
 
-  // Clozet B.O 연결 시작
+  useEffect(() => {
+    loadCampaignStats();
+  }, [campaigns, loadCampaignStats]);
+
+  // Refresh queue status every 10 seconds when there are pending items
+  useEffect(() => {
+    const hasPending = Object.values(campaignStats).some(
+      (s) => s.queuePending > 0 || s.queueSending > 0
+    );
+    if (!hasPending) return;
+
+    const interval = setInterval(() => {
+      loadCampaignStats();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [campaignStats, loadCampaignStats]);
+
+  // Aggregate stats across all campaigns
+  const totalStats = Object.values(campaignStats).reduce(
+    (acc, s) => ({
+      shares: acc.shares + s.shares,
+      dmsSent: acc.dmsSent + s.dmsSent,
+      clicks: acc.clicks + s.clicks,
+    }),
+    { shares: 0, dmsSent: 0, clicks: 0 }
+  );
+
+  // Clozet
   const handleClozetConnect = () => {
     if (!brandId) return;
     setClozetConnecting(true);
-
     const nonce = crypto.randomUUID();
     sessionStorage.setItem('clozet_connect_state', nonce);
-
-    const callbackUrl = `${WORKERS_URL}/auth/clozet/callback`;
     const params = new URLSearchParams({
       brand_id: brandId,
       state: nonce,
-      callback: callbackUrl,
+      callback: `${WORKERS_URL}/auth/clozet/callback`,
       origin: encodeURIComponent(window.location.origin),
     });
-
     window.location.href = `${CLOZET_BO_URL}/auth/share2dm-connect?${params}`;
   };
 
-  // Clozet 연결 해제
   const handleClozetDisconnect = async () => {
     if (!window.confirm('Clozet 연결을 해제하시겠습니까?')) return;
     await supabase
@@ -194,16 +243,12 @@ export default function Dashboard() {
     return '';
   };
 
-  // 릴스 URL 변경 시 Clozet 콘텐츠 자동 조회
   const handleReelUrlChange = async (reelUrl: string) => {
     setForm(prev => ({ ...prev, reel_url: reelUrl, product_url: '' }));
     setClozetContent(null);
-
-    if (!clozetStoreName) return; // Clozet 미연결이면 스킵
-
+    if (!clozetStoreName) return;
     const shortCode = extractShortCode(reelUrl);
     if (!shortCode || shortCode.length < 5) return;
-
     setClozetLookingUp(true);
     try {
       const res = await fetch(
@@ -215,7 +260,7 @@ export default function Dashboard() {
         setForm(prev => ({ ...prev, product_url: data.clozet_url! }));
       }
     } catch {
-      // 조회 실패 시 무시 — 수동 입력으로 폴백
+      // 조회 실패 시 무시
     } finally {
       setClozetLookingUp(false);
     }
@@ -227,13 +272,11 @@ export default function Dashboard() {
       alert(`현재 요금제(${brandPlan})에서는 캠페인을 ${limits.maxCampaigns}개까지만 만들 수 있습니다. 업그레이드해주세요.`);
       return;
     }
-
     const shortCode = extractShortCode(form.reel_url);
     if (!shortCode) {
       alert('올바른 릴스 또는 포스트 URL을 입력해주세요.');
       return;
     }
-
     let reelVideoId: string;
     try {
       const res = await fetch(
@@ -249,9 +292,7 @@ export default function Dashboard() {
       alert('미디어 ID 조회 중 오류가 발생했습니다.');
       return;
     }
-
     const isFromClozet = clozetContent?.found && form.product_url === clozetContent.clozet_url;
-
     const { error } = await supabase.from('share2dm_campaigns').insert({
       reel_url: form.reel_url,
       ig_contents_id: reelVideoId,
@@ -263,13 +304,11 @@ export default function Dashboard() {
       clozet_short_code: isFromClozet ? (clozetContent?.short_code ?? null) : null,
       brand_id: brandId,
     });
-
     if (error) {
       console.error('[Campaign] insert error:', error);
       alert(`캠페인 생성 실패: ${error.message}`);
       return;
     }
-
     setForm({ reel_url: '', response_message: '', product_url: '' });
     setClozetContent(null);
     setShowForm(false);
@@ -287,9 +326,9 @@ export default function Dashboard() {
   const deleteCampaign = async (id: string) => {
     if (!window.confirm('캠페인을 삭제하시겠습니까? DM 발송 기록도 함께 삭제됩니다.')) return;
     await supabase.from('share2dm_dm_logs').delete().eq('campaign_id', id);
+    await supabase.from('share2dm_dm_queue').delete().eq('campaign_id', id);
     await supabase.from('share2dm_campaigns').delete().eq('id', id);
     loadCampaigns();
-    loadStats();
   };
 
   return (
@@ -312,7 +351,7 @@ export default function Dashboard() {
             <PlanBadge plan={brandPlan} />
             {billingCardLast4 && (
               <span style={{ fontSize: '12px', color: '#888', padding: '3px 8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-                💳 ****{billingCardLast4}
+                **** {billingCardLast4}
               </span>
             )}
           </div>
@@ -327,12 +366,11 @@ export default function Dashboard() {
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
           <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#888', fontWeight: '600' }}>연결된 플랫폼</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '13px', color: '#444' }}>✅ Instagram</span>
-
+            <span style={{ fontSize: '13px', color: '#444' }}>Instagram</span>
             {clozetStoreName ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#444' }}>
-                  🔗 Clozet — <strong>{clozetStoreName}</strong>
+                  Clozet — <strong>{clozetStoreName}</strong>
                 </span>
                 <button
                   onClick={handleClozetDisconnect}
@@ -351,18 +389,18 @@ export default function Dashboard() {
                   color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer',
                 }}
               >
-                {clozetConnecting ? '연결 중...' : '🔗 Clozet 연결하기'}
+                {clozetConnecting ? '연결 중...' : 'Clozet 연결하기'}
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats Overview */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '30px' }}>
-        <StatCard label="총 공유 수" value={stats.totalShares} />
-        <StatCard label="DM 발송 수" value={stats.totalDMs} />
-        <StatCard label="링크 클릭 수" value={stats.totalClicks} />
+        <StatCard label="총 공유 수" value={totalStats.shares} />
+        <StatCard label="DM 발송 수" value={totalStats.dmsSent} />
+        <StatCard label="링크 클릭 수" value={totalStats.clicks} />
       </div>
 
       {/* Campaign Form */}
@@ -377,20 +415,19 @@ export default function Dashboard() {
                 onChange={(e) => handleReelUrlChange(e.target.value)}
                 style={inputStyle}
               />
-              {/* Clozet 조회 상태 표시 */}
               {clozetStoreName && (
                 <div style={{ marginTop: '6px', fontSize: '12px' }}>
                   {clozetLookingUp && (
-                    <span style={{ color: '#888' }}>🔍 Clozet에서 콘텐츠 조회 중...</span>
+                    <span style={{ color: '#888' }}>Clozet에서 콘텐츠 조회 중...</span>
                   )}
                   {!clozetLookingUp && clozetContent?.found && (
                     <span style={{ color: '#16a34a' }}>
-                      ✅ Clozet 콘텐츠 발견! — app.clozet.my/reel/{clozetContent.short_code}
+                      Clozet 콘텐츠 발견! — app.clozet.my/reel/{clozetContent.short_code}
                     </span>
                   )}
                   {!clozetLookingUp && clozetContent && !clozetContent.found && (
                     <span style={{ color: '#dc2626' }}>
-                      ❌ Clozet에 등록되지 않은 릴스입니다. 제품 링크를 직접 입력해주세요.
+                      Clozet에 등록되지 않은 릴스입니다. 제품 링크를 직접 입력해주세요.
                     </span>
                   )}
                 </div>
@@ -418,7 +455,7 @@ export default function Dashboard() {
               />
               {clozetContent?.found && (
                 <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#16a34a' }}>
-                  🔒 Clozet 릴스 페이지로 자동 설정됨
+                  Clozet 릴스 페이지로 자동 설정됨
                 </p>
               )}
             </div>
@@ -436,54 +473,96 @@ export default function Dashboard() {
         {campaigns.length === 0 ? (
           <p style={{ color: '#888' }}>아직 캠페인이 없습니다. 첫 캠페인을 만들어보세요!</p>
         ) : (
-          campaigns.map((c) => (
-            <div key={c.id} style={{ border: '1px solid #eee', borderRadius: '8px', padding: '16px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{c.reel_url}</p>
-                  <p style={{ color: '#666', margin: '0 0 4px 0', fontSize: '14px' }}>{c.response_message}</p>
+          campaigns.map((c) => {
+            const cs = campaignStats[c.id];
+            const hasQueue = cs && (cs.queuePending > 0 || cs.queueSending > 0);
+
+            return (
+              <div key={c.id} style={{ border: '1px solid #eee', borderRadius: '8px', padding: '16px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{c.reel_url}</p>
+                    <p style={{ color: '#666', margin: '0 0 4px 0', fontSize: '14px' }}>{c.response_message}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <p style={{ color: '#888', margin: 0, fontSize: '12px' }}>{c.product_url}</p>
+                      {c.product_url_source === 'clozet' && (
+                        <span style={{ fontSize: '11px', padding: '1px 6px', backgroundColor: '#1a1a2e', color: 'white', borderRadius: '4px' }}>
+                          Clozet
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <p style={{ color: '#888', margin: 0, fontSize: '12px' }}>{c.product_url}</p>
-                    {c.product_url_source === 'clozet' && (
-                      <span style={{ fontSize: '11px', padding: '1px 6px', backgroundColor: '#1a1a2e', color: 'white', borderRadius: '4px' }}>
-                        Clozet
-                      </span>
-                    )}
+                    <button
+                      onClick={() => toggleCampaign(c.id, c.is_active)}
+                      style={{
+                        padding: '6px 16px',
+                        backgroundColor: c.is_active ? '#4CAF50' : '#ccc',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                      }}
+                    >
+                      {c.is_active ? 'ON' : 'OFF'}
+                    </button>
+                    <button
+                      onClick={() => deleteCampaign(c.id)}
+                      style={{
+                        padding: '6px 10px',
+                        backgroundColor: 'white',
+                        color: '#999',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                      }}
+                    >
+                      삭제
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button
-                    onClick={() => toggleCampaign(c.id, c.is_active)}
-                    style={{
-                      padding: '6px 16px',
-                      backgroundColor: c.is_active ? '#4CAF50' : '#ccc',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '20px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
-                  >
-                    {c.is_active ? 'ON' : 'OFF'}
-                  </button>
-                  <button
-                    onClick={() => deleteCampaign(c.id)}
-                    style={{
-                      padding: '6px 10px',
-                      backgroundColor: 'white',
-                      color: '#999',
-                      border: '1px solid #ddd',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
-                  >
-                    삭제
-                  </button>
-                </div>
+
+                {/* Per-campaign stats */}
+                {cs && (
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f0f0f0' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                      <MiniStat label="공유 수" value={cs.shares} />
+                      <MiniStat label="DM 발송" value={cs.dmsSent} />
+                      <MiniStat label="링크 클릭" value={cs.clicks} />
+                    </div>
+
+                    {/* Queue progress bar */}
+                    {hasQueue && (
+                      <div style={{ marginTop: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                          <span>발송 진행 중</span>
+                          <span style={{ fontWeight: 'bold' }}>
+                            {cs.dmsSent} / {cs.shares}
+                          </span>
+                        </div>
+                        <div style={{ height: '6px', backgroundColor: '#f0f0f0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: cs.shares > 0 ? `${(cs.dmsSent / cs.shares) * 100}%` : '0%',
+                              height: '100%',
+                              backgroundColor: '#7C3AED',
+                              borderRadius: '3px',
+                              transition: 'width 0.5s ease',
+                            }}
+                          />
+                        </div>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#888' }}>
+                          대기 {cs.queuePending}건 | 발송 중 {cs.queueSending}건
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
@@ -498,10 +577,10 @@ function PlanBadge({ plan }: { plan: PlanName }) {
     pro:      { bg: '#FEF3C7', text: '#D97706' },
   };
   const labels: Record<PlanName, string> = {
-    free: '🌱 Free',
-    standard: '🚀 Standard',
-    growth: '📈 Growth',
-    pro: '👑 Pro',
+    free: 'Free',
+    standard: 'Standard',
+    growth: 'Growth',
+    pro: 'Pro',
   };
   const c = colors[plan];
   return (
@@ -548,6 +627,15 @@ function StatCard({ label, value }: { label: string; value: number }) {
     <div style={{ border: '1px solid #eee', borderRadius: '8px', padding: '20px', textAlign: 'center' }}>
       <p style={{ margin: '0 0 8px 0', color: '#888', fontSize: '14px' }}>{label}</p>
       <p style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>{value.toLocaleString()}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <p style={{ margin: '0 0 2px 0', fontSize: '11px', color: '#888' }}>{label}</p>
+      <p style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{value.toLocaleString()}</p>
     </div>
   );
 }

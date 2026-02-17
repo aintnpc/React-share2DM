@@ -82,3 +82,18 @@ export interface DmLog {
   dm_sent_at: string;
   link_clicked_at: string | null;
 }
+
+export interface DmQueue {
+  id: string;
+  brand_id: string;
+  campaign_id: string;
+  sender_ig_id: string;
+  ig_contents_id: string;
+  message: string;
+  access_token: string;
+  status: 'pending' | 'sending' | 'sent' | 'failed';
+  retry_count: number;
+  error_message: string | null;
+  created_at: string;
+  sent_at: string | null;
+}

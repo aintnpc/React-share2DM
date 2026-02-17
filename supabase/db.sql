@@ -394,7 +394,17 @@ CREATE TABLE public.share2dm_brands (
   plan text DEFAULT 'free'::text CHECK (plan = ANY (ARRAY['free'::text, 'standard'::text, 'growth'::text, 'pro'::text])),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT share2dm_brands_pkey PRIMARY KEY (id)
+  clozet_seller_id uuid,
+  clozet_store_name text,
+  clozet_connected_at timestamp with time zone,
+  toss_customer_key text,
+  toss_billing_key text,
+  billing_started_at timestamp with time zone,
+  billing_card_last4 text,
+  next_billing_date date,
+  last_payment_key text,
+  CONSTRAINT share2dm_brands_pkey PRIMARY KEY (id),
+  CONSTRAINT share2dm_brands_clozet_seller_id_fkey FOREIGN KEY (clozet_seller_id) REFERENCES public.seller_profile(id)
 );
 CREATE TABLE public.share2dm_campaigns (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -407,8 +417,23 @@ CREATE TABLE public.share2dm_campaigns (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   short_code text,
+  clozet_content_id uuid,
+  clozet_short_code text,
+  product_url_source text DEFAULT 'manual'::text CHECK (product_url_source = ANY (ARRAY['manual'::text, 'clozet'::text])),
   CONSTRAINT share2dm_campaigns_pkey PRIMARY KEY (id),
-  CONSTRAINT share2dm_campaigns_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id)
+  CONSTRAINT share2dm_campaigns_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id),
+  CONSTRAINT share2dm_campaigns_clozet_content_id_fkey FOREIGN KEY (clozet_content_id) REFERENCES public.contents(id)
+);
+CREATE TABLE public.share2dm_connect_tokens (
+  token uuid NOT NULL DEFAULT gen_random_uuid(),
+  seller_profile_id uuid NOT NULL,
+  share2dm_brand_id uuid,
+  expires_at timestamp with time zone NOT NULL DEFAULT (now() + '00:10:00'::interval),
+  used boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT share2dm_connect_tokens_pkey PRIMARY KEY (token),
+  CONSTRAINT share2dm_connect_tokens_seller_profile_id_fkey FOREIGN KEY (seller_profile_id) REFERENCES public.seller_profile(id),
+  CONSTRAINT share2dm_connect_tokens_share2dm_brand_id_fkey FOREIGN KEY (share2dm_brand_id) REFERENCES public.share2dm_brands(id)
 );
 CREATE TABLE public.share2dm_dm_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -421,6 +446,19 @@ CREATE TABLE public.share2dm_dm_logs (
   CONSTRAINT share2dm_dm_logs_pkey PRIMARY KEY (id),
   CONSTRAINT share2dm_dm_logs_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.share2dm_campaigns(id),
   CONSTRAINT share2dm_dm_logs_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id)
+);
+CREATE TABLE public.share2dm_payments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  brand_id uuid,
+  payment_key text NOT NULL,
+  order_id text NOT NULL,
+  plan text NOT NULL,
+  amount integer NOT NULL,
+  status text NOT NULL DEFAULT 'DONE'::text,
+  paid_at timestamp with time zone DEFAULT now(),
+  toss_response jsonb,
+  CONSTRAINT share2dm_payments_pkey PRIMARY KEY (id),
+  CONSTRAINT share2dm_payments_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id)
 );
 CREATE TABLE public.shipping_companies (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

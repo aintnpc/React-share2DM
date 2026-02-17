@@ -4,6 +4,7 @@ import { handleTracking } from './tracking';
 import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
 import { handleClozetCallback, handleClozetContentLookup } from './clozet';
 import { handleIssueBillingKey, handleBillingCron } from './billing';
+import { handleQueueCron, handleQueueStatus, handleAdminStats } from './queue-processor';
 import { createClient } from '@supabase/supabase-js';
 
 async function handleDebugSubscriptions(env: Env): Promise<Response> {
@@ -219,6 +220,16 @@ export default {
         return handleIssueBillingKey(request, env);
       }
 
+      // Queue status (GET /queue/status?brand_id=...&campaign_id=...)
+      if (url.pathname === '/queue/status' && request.method === 'GET') {
+        return handleQueueStatus(url, env);
+      }
+
+      // Admin stats (GET /admin/stats)
+      if (url.pathname === '/admin/stats' && request.method === 'GET') {
+        return handleAdminStats(env);
+      }
+
       // Debug: check & resubscribe page webhooks (GET /debug/subscriptions)
       if (url.pathname === '/debug/subscriptions' && request.method === 'GET') {
         return handleDebugSubscriptions(env);
@@ -238,8 +249,16 @@ export default {
     }
   },
 
-  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    console.log('[Cron] Billing cron triggered');
-    await handleBillingCron(env);
+  async scheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    // Every minute: process DM queue
+    if (event.cron === '*/1 * * * *') {
+      console.log('[Cron] Queue processor triggered');
+      await handleQueueCron(env);
+    }
+    // Daily at midnight UTC: billing
+    if (event.cron === '0 0 * * *') {
+      console.log('[Cron] Billing cron triggered');
+      await handleBillingCron(env);
+    }
   },
 };
