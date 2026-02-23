@@ -149,7 +149,7 @@ const Pricing = () => {
           </div>
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('월 50,000건 DM 발송', '50,000 DMs / month')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 10개', '10 campaigns')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 무제한', 'Unlimited campaigns')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-purple-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button></span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-green-400 shrink-0" /><span className="text-green-400 text-sm font-medium">{t('자사몰(D2C) 연결', 'Connect your own D2C store')}</span></li>
             <li className="flex items-start gap-3">
