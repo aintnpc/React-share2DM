@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Check, Lock } from 'lucide-react';
+import { Check, HelpCircle } from 'lucide-react';
 import { useLang } from '../lib/i18n';
 import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { PlanName } from '../lib/plan-config';
@@ -65,7 +65,7 @@ const Pricing = () => {
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('월 1,000건 DM 발송', '1,000 DMs / month')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 1개', '1 campaign')}</span></li>
-            <li className="flex items-start gap-3"><Lock className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet 입점 강제', 'Clozet store only')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-gray-500 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 8%', 'Platform fee 8%')}</span></li>
           </ul>
           <button onClick={() => handlePlanSelect('free')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
@@ -89,7 +89,7 @@ const Pricing = () => {
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm font-medium">{t('월 10,000건 DM 발송', '10,000 DMs / month')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('캠페인 3개', '3 campaigns')}</span></li>
-            <li className="flex items-start gap-3"><Lock className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('Clozet 입점 강제', 'Clozet store only')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-pink-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-pink-200/40 text-xs">(Clozet Only)</span></span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('플랫폼 수수료 8%', 'Platform fee 8%')}</span></li>
           </ul>
           <button onClick={() => handlePlanSelect('standard')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20">
@@ -110,7 +110,7 @@ const Pricing = () => {
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('월 50,000건 DM 발송', '50,000 DMs / month')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 10개', '10 campaigns')}</span></li>
-            <li className="flex items-start gap-3"><Lock className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet 입점 강제', 'Clozet store only')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-purple-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 7%', 'Platform fee 7%')}</span></li>
           </ul>
           <button onClick={() => handlePlanSelect('growth')} className="w-full py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors">

@@ -6,10 +6,12 @@ import Dashboard from './pages/Dashboard';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/Home';
 import Pricing from './pages/Pricing';
+import ClozetConnect from './pages/ClozetConnect';
 import BillingSuccess from './pages/BillingSuccess';
 import BillingFail from './pages/BillingFail';
 import ServiceTerms from './pages/terms/ServiceTerms';
 import PrivacyPolicy from './pages/terms/PrivacyPolicy';
+import DataDeletion from './pages/terms/DataDeletion';
 import Admin from './pages/Admin';
 import LandingLayout from './layouts/LandingLayout';
 
@@ -24,6 +26,7 @@ function App() {
         <Route element={<LandingLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/clozet-connect" element={<ClozetConnect />} />
         </Route>
 
         {/* App pages */}
@@ -42,6 +45,7 @@ function App() {
         {/* Terms */}
         <Route path="/terms/service" element={<ServiceTerms />} />
         <Route path="/terms/privacy" element={<PrivacyPolicy />} />
+        <Route path="/privacy/data-deletion" element={<DataDeletion />} />
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

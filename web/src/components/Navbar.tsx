@@ -35,6 +35,12 @@ const Navbar = () => {
         >
           {t('요금제', 'Pricing')}
         </button>
+        <button
+          onClick={() => navigate('/clozet-connect')}
+          className={`transition-colors ${currentPath === '/clozet-connect' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+        >
+          Clozet Connect
+        </button>
       </div>
       <div className="flex items-center gap-3 md:gap-4">
         <div className="flex items-center text-xs font-medium border border-white/10 rounded-full overflow-hidden">
