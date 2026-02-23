@@ -20,6 +20,34 @@ async function requestBilling(plan: PlanName, brandId: string) {
   });
 }
 
+type FeeTableProps = {
+  fashion: number;
+  beauty: number;
+  life: number;
+  textColor?: string;
+  labelColor?: string;
+};
+
+const FeeTable = ({ fashion, beauty, life, textColor = 'text-gray-400', labelColor = 'text-gray-500' }: FeeTableProps) => {
+  const { t } = useLang();
+  return (
+    <span className="block mt-1.5 space-y-1">
+      <span className="flex items-center gap-2 text-xs">
+        <span className={`${labelColor} w-16`}>{t('패션', 'Fashion')}</span>
+        <span className={textColor}>{fashion}%</span>
+      </span>
+      <span className="flex items-center gap-2 text-xs">
+        <span className={`${labelColor} w-16`}>{t('뷰티', 'Beauty')}</span>
+        <span className={textColor}>{beauty}%</span>
+      </span>
+      <span className="flex items-center gap-2 text-xs">
+        <span className={`${labelColor} w-16`}>{t('라이프/홈', 'Life/Home')}</span>
+        <span className={textColor}>{life}%</span>
+      </span>
+    </span>
+  );
+};
+
 const Pricing = () => {
   const navigate = useNavigate();
   const { t } = useLang();
@@ -66,7 +94,13 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('월 1,000건 DM 발송', '1,000 DMs / month')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 1개', '1 campaign')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-gray-500 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 8%', 'Platform fee 8%')}</span></li>
+            <li className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
+              <span className="text-gray-300 text-sm">
+                {t('플랫폼 수수료', 'Platform fee')}
+                <FeeTable fashion={8} beauty={10} life={8} />
+              </span>
+            </li>
           </ul>
           <button onClick={() => handlePlanSelect('free')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
             {t('무료로 시작', 'Start Free')}
@@ -90,7 +124,13 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm font-medium">{t('월 10,000건 DM 발송', '10,000 DMs / month')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('캠페인 3개', '3 campaigns')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-pink-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-pink-200/40 text-xs">(Clozet Only)</span></span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('플랫폼 수수료 8%', 'Platform fee 8%')}</span></li>
+            <li className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-pink-400 shrink-0 mt-0.5" />
+              <span className="text-white text-sm">
+                {t('플랫폼 수수료', 'Platform fee')}
+                <FeeTable fashion={7} beauty={8} life={6} textColor="text-white" labelColor="text-pink-200/50" />
+              </span>
+            </li>
           </ul>
           <button onClick={() => handlePlanSelect('standard')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20">
             {t('시작하기', 'Get Started')}
@@ -110,8 +150,15 @@ const Pricing = () => {
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('월 50,000건 DM 발송', '50,000 DMs / month')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 10개', '10 campaigns')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-purple-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 7%', 'Platform fee 7%')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-purple-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button></span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-green-400 shrink-0" /><span className="text-green-400 text-sm font-medium">{t('자사몰(D2C) 연결', 'Connect your own D2C store')}</span></li>
+            <li className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+              <span className="text-gray-300 text-sm">
+                {t('플랫폼 수수료', 'Platform fee')}
+                <FeeTable fashion={5} beauty={6} life={4} textColor="text-purple-300" labelColor="text-gray-500" />
+              </span>
+            </li>
           </ul>
           <button onClick={() => handlePlanSelect('growth')} className="w-full py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors">
             {t('시작하기', 'Get Started')}
@@ -132,7 +179,13 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('무제한 DM 발송', 'Unlimited DMs')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 무제한', 'Unlimited campaigns')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-green-400 shrink-0" /><span className="text-green-400 text-sm font-medium">{t('자사몰(D2C) 자유 연결', 'Connect your own D2C store')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('플랫폼 수수료 6%', 'Platform fee 6%')}</span></li>
+            <li className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
+              <span className="text-gray-300 text-sm">
+                {t('플랫폼 수수료', 'Platform fee')}
+                <FeeTable fashion={3} beauty={4} life={3} />
+              </span>
+            </li>
           </ul>
           <button onClick={() => handlePlanSelect('pro')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
             {t('시작하기', 'Get Started')}
