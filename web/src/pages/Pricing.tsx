@@ -72,45 +72,45 @@ const Pricing = () => {
           </button>
         </div>
 
-        {/* Standard Plan (Killer) */}
+        {/* Standard Plan */}
+        <div className="p-8 rounded-3xl bg-[#151221]/50 border border-white/5 backdrop-blur-sm flex flex-col">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-white mb-2">{t('🚀 Standard', '🚀 Standard')}</h3>
+            <p className="text-gray-400 text-sm h-10">{t('ManyChat 이탈 셀러', 'Sellers leaving ManyChat')}</p>
+          </div>
+          <div className="mb-8">
+            <span className="text-4xl font-extrabold text-white">{t('9,900', '9,900')}</span>
+            <span className="text-gray-500"> {t('원/월', 'KRW/mo')}</span>
+          </div>
+          <ul className="space-y-4 mb-8 flex-1">
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('월 10,000건 DM 발송', '10,000 DMs / month')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 3개', '3 campaigns')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-gray-500 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
+          </ul>
+          <button onClick={() => handlePlanSelect('standard')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
+            {t('시작하기', 'Get Started')}
+          </button>
+        </div>
+
+        {/* Growth Plan (Killer) */}
         <div className="p-8 rounded-3xl bg-gradient-to-b from-purple-900/40 to-[#151221] border border-purple-500/50 flex flex-col relative shadow-[0_0_40px_rgba(147,51,234,0.15)] transform md:-translate-y-4">
           <div className="absolute top-0 inset-x-0 flex justify-center transform -translate-y-1/2">
             <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">Killer</span>
           </div>
           <div className="mb-6 mt-2">
-            <h3 className="text-xl font-bold text-white mb-2">{t('🚀 Standard', '🚀 Standard')}</h3>
-            <p className="text-purple-200/70 text-sm h-10">{t('ManyChat 이탈 셀러', 'Sellers leaving ManyChat')}</p>
-          </div>
-          <div className="mb-8">
-            <span className="text-4xl font-extrabold text-white">{t('9,900', '9,900')}</span>
-            <span className="text-purple-300/60"> {t('원/월', 'KRW/mo')}</span>
-          </div>
-          <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm font-medium">{t('월 10,000건 DM 발송', '10,000 DMs / month')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('캠페인 3개', '3 campaigns')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-pink-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-pink-200/40 text-xs">(Clozet Only)</span></span></li>
-          </ul>
-          <button onClick={() => handlePlanSelect('standard')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20">
-            {t('시작하기', 'Get Started')}
-          </button>
-        </div>
-
-        {/* Growth Plan */}
-        <div className="p-8 rounded-3xl bg-[#151221] border border-white/10 flex flex-col relative overflow-hidden">
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-purple-400 mb-2">{t('📈 Growth', '📈 Growth')}</h3>
-            <p className="text-gray-400 text-sm h-10">{t('본격 성장형 마켓', 'Scaling marketplace sellers')}</p>
+            <h3 className="text-xl font-bold text-white mb-2">{t('📈 Growth', '📈 Growth')}</h3>
+            <p className="text-purple-200/70 text-sm h-10">{t('본격 성장형 마켓', 'Scaling marketplace sellers')}</p>
           </div>
           <div className="mb-8">
             <span className="text-4xl font-extrabold text-white">{t('49,000', '49,000')}</span>
-            <span className="text-gray-500"> {t('원/월', 'KRW/mo')}</span>
+            <span className="text-purple-300/60"> {t('원/월', 'KRW/mo')}</span>
           </div>
           <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('월 50,000건 DM 발송', '50,000 DMs / month')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 10개', '10 campaigns')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-purple-400 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-purple-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm font-medium">{t('월 50,000건 DM 발송', '50,000 DMs / month')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('캠페인 10개', '10 campaigns')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-pink-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-pink-200/40 text-xs">(Clozet Only)</span></span></li>
           </ul>
-          <button onClick={() => handlePlanSelect('growth')} className="w-full py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors">
+          <button onClick={() => handlePlanSelect('growth')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20">
             {t('시작하기', 'Get Started')}
           </button>
         </div>
