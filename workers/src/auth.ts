@@ -117,7 +117,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        subscribed_fields: ['messages'],
+        subscribed_fields: ['messages', 'comments'],
         access_token: pageAccessToken,
       }),
     }

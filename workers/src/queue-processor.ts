@@ -98,13 +98,13 @@ async function processBrandQueue(
           .update({ status: 'sent', sent_at: new Date().toISOString() })
           .eq('id', item.id);
 
-        await supabase.from('share2dm_dm_logs').insert({
+        await supabase.from('share2dm_dm_logs').upsert({
           id: crypto.randomUUID(),
           campaign_id: item.campaign_id,
           brand_id: item.brand_id,
           sender_ig_id: item.sender_ig_id,
           ig_contents_id: item.ig_contents_id,
-        });
+        }, { onConflict: 'campaign_id,sender_ig_id' });
 
         console.log(`[Queue] Sent DM to ${item.sender_ig_id} (campaign: ${item.campaign_id})`);
       } else if (response.status === 429) {

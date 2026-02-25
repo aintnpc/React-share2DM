@@ -16,6 +16,9 @@ interface Campaign {
   clozet_short_code: string | null;
   is_active: boolean;
   created_at: string;
+  campaign_type: 'reel_share' | 'comment_automation';
+  trigger_keywords: string[];
+  comment_reply_message: string | null;
 }
 
 interface CampaignStats {
@@ -25,6 +28,7 @@ interface CampaignStats {
   queuePending: number;
   queueSending: number;
   queueTotal: number; // pending + sending + sent + failed
+  commentCount: number; // comment_automation: 댓글 감지 수
 }
 
 interface ClozetContent {
@@ -44,7 +48,14 @@ export default function Dashboard() {
   const [dmUsage, setDmUsage] = useState({ used: 0, limit: 1000 });
   const [campaignUsage, setCampaignUsage] = useState({ used: 0, limit: 1 });
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ reel_url: '', response_message: '', product_url: '' });
+  const [campaignType, setCampaignType] = useState<'reel_share' | 'comment_automation'>('reel_share');
+  const [form, setForm] = useState({
+    reel_url: '',
+    response_message: '',
+    product_url: '',
+    trigger_keywords: '',
+    comment_reply_message: '',
+  });
 
   const [billingCardLast4, setBillingCardLast4] = useState<string | null>(null);
   const [clozetStoreName, setClozetStoreName] = useState<string | null>(null);
@@ -126,6 +137,16 @@ export default function Dashboard() {
         .eq('campaign_id', c.id)
         .not('link_clicked_at', 'is', null);
 
+      // Comment Automation: 댓글 감지 수
+      let commentCount = 0;
+      if (c.campaign_type === 'comment_automation') {
+        const { count } = await supabase
+          .from('share2dm_comment_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('campaign_id', c.id);
+        commentCount = count ?? 0;
+      }
+
       // Queue status
       let queuePending = 0;
       let queueSending = 0;
@@ -142,13 +163,15 @@ export default function Dashboard() {
         // ignore
       }
 
+      const isComment = c.campaign_type === 'comment_automation';
       stats[c.id] = {
-        shares: (dmCount ?? 0) + queuePending + queueSending,
+        shares: isComment ? commentCount : (dmCount ?? 0) + queuePending + queueSending,
         dmsSent: dmCount ?? 0,
         clicks: clickCount ?? 0,
         queuePending,
         queueSending,
         queueTotal,
+        commentCount,
       };
     }
 
@@ -266,52 +289,87 @@ export default function Dashboard() {
     }
   };
 
+  const resetForm = () => {
+    setForm({ reel_url: '', response_message: '', product_url: '', trigger_keywords: '', comment_reply_message: '' });
+    setClozetContent(null);
+    setShowForm(false);
+  };
+
   const createCampaign = async () => {
     const limits = PLAN_CONFIG[brandPlan];
     if (limits.maxCampaigns !== -1 && campaigns.length >= limits.maxCampaigns) {
       alert(`현재 요금제(${brandPlan})에서는 캠페인을 ${limits.maxCampaigns}개까지만 만들 수 있습니다. 업그레이드해주세요.`);
       return;
     }
-    const shortCode = extractShortCode(form.reel_url);
+
+    const postUrl = form.reel_url;
+    const shortCode = extractShortCode(postUrl);
     if (!shortCode) {
       alert('올바른 릴스 또는 포스트 URL을 입력해주세요.');
       return;
     }
-    let reelVideoId: string;
+
+    let mediaId: string;
     try {
       const res = await fetch(
-        `${WORKERS_URL}/media-id?brand_id=${brandId}&url=${encodeURIComponent(form.reel_url)}`
+        `${WORKERS_URL}/media-id?brand_id=${brandId}&url=${encodeURIComponent(postUrl)}`
       );
       const data = await res.json() as { media_id?: string; error?: string };
       if (!data.media_id) {
         alert(`미디어 ID를 가져올 수 없습니다: ${data.error ?? '알 수 없는 오류'}`);
         return;
       }
-      reelVideoId = data.media_id;
+      mediaId = data.media_id;
     } catch {
       alert('미디어 ID 조회 중 오류가 발생했습니다.');
       return;
     }
-    const isFromClozet = clozetContent?.found && form.product_url === clozetContent.clozet_url;
-    const { error } = await supabase.from('share2dm_campaigns').insert({
-      reel_url: form.reel_url,
-      ig_contents_id: reelVideoId,
-      short_code: shortCode,
-      response_message: form.response_message,
-      product_url: form.product_url,
-      product_url_source: isFromClozet ? 'clozet' : 'manual',
-      clozet_content_id: isFromClozet ? (clozetContent?.content_id ?? null) : null,
-      clozet_short_code: isFromClozet ? (clozetContent?.short_code ?? null) : null,
-      brand_id: brandId,
-    });
-    if (error) {
-      console.error('[Campaign] insert error:', error);
-      alert(`캠페인 생성 실패: ${error.message}`);
-      return;
+
+    if (campaignType === 'comment_automation') {
+      const keywords = form.trigger_keywords.split(',').map((k) => k.trim()).filter(Boolean);
+      if (keywords.length === 0) {
+        alert('트리거 키워드를 최소 1개 이상 입력해주세요.');
+        return;
+      }
+      const { error } = await supabase.from('share2dm_campaigns').insert({
+        brand_id: brandId,
+        campaign_type: 'comment_automation',
+        reel_url: postUrl,
+        ig_contents_id: mediaId,
+        short_code: shortCode,
+        response_message: form.response_message,
+        product_url: form.product_url,
+        product_url_source: 'manual',
+        trigger_keywords: keywords,
+        comment_reply_message: form.comment_reply_message || null,
+      });
+      if (error) {
+        console.error('[Campaign] insert error:', error);
+        alert(`캠페인 생성 실패: ${error.message}`);
+        return;
+      }
+    } else {
+      const isFromClozet = clozetContent?.found && form.product_url === clozetContent.clozet_url;
+      const { error } = await supabase.from('share2dm_campaigns').insert({
+        brand_id: brandId,
+        campaign_type: 'reel_share',
+        reel_url: postUrl,
+        ig_contents_id: mediaId,
+        short_code: shortCode,
+        response_message: form.response_message,
+        product_url: form.product_url,
+        product_url_source: isFromClozet ? 'clozet' : 'manual',
+        clozet_content_id: isFromClozet ? (clozetContent?.content_id ?? null) : null,
+        clozet_short_code: isFromClozet ? (clozetContent?.short_code ?? null) : null,
+      });
+      if (error) {
+        console.error('[Campaign] insert error:', error);
+        alert(`캠페인 생성 실패: ${error.message}`);
+        return;
+      }
     }
-    setForm({ reel_url: '', response_message: '', product_url: '' });
-    setClozetContent(null);
-    setShowForm(false);
+
+    resetForm();
     loadCampaigns();
   };
 
@@ -325,6 +383,7 @@ export default function Dashboard() {
 
   const deleteCampaign = async (id: string) => {
     if (!window.confirm('캠페인을 삭제하시겠습니까? DM 발송 기록도 함께 삭제됩니다.')) return;
+    await supabase.from('share2dm_comment_logs').delete().eq('campaign_id', id);
     await supabase.from('share2dm_dm_logs').delete().eq('campaign_id', id);
     await supabase.from('share2dm_dm_queue').delete().eq('campaign_id', id);
     await supabase.from('share2dm_campaigns').delete().eq('id', id);
@@ -406,34 +465,80 @@ export default function Dashboard() {
       {/* Campaign Form */}
       {showForm && (
         <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', marginBottom: '20px' }}>
-          <h3>새 캠페인</h3>
+          <h3 style={{ margin: '0 0 16px 0' }}>새 캠페인</h3>
+
+          {/* 캠페인 타입 탭 */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setCampaignType('reel_share')}
+              style={{
+                padding: '8px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold',
+                backgroundColor: campaignType === 'reel_share' ? '#E1306C' : '#f0f0f0',
+                color: campaignType === 'reel_share' ? 'white' : '#666',
+              }}
+            >
+              릴스 공유 DM
+            </button>
+            <button
+              onClick={() => setCampaignType('comment_automation')}
+              style={{
+                padding: '8px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold',
+                backgroundColor: campaignType === 'comment_automation' ? '#7C3AED' : '#f0f0f0',
+                color: campaignType === 'comment_automation' ? 'white' : '#666',
+              }}
+            >
+              댓글 자동화
+            </button>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* 공통: 게시물/릴스 URL */}
             <div>
               <input
-                placeholder="릴스 URL (https://instagram.com/reel/...)"
+                placeholder={campaignType === 'comment_automation'
+                  ? '게시물 URL (https://instagram.com/p/... 또는 /reel/...)'
+                  : '릴스 URL (https://instagram.com/reel/...)'}
                 value={form.reel_url}
                 onChange={(e) => handleReelUrlChange(e.target.value)}
                 style={inputStyle}
               />
-              {clozetStoreName && (
+              {campaignType === 'reel_share' && clozetStoreName && (
                 <div style={{ marginTop: '6px', fontSize: '12px' }}>
-                  {clozetLookingUp && (
-                    <span style={{ color: '#888' }}>Clozet에서 콘텐츠 조회 중...</span>
-                  )}
+                  {clozetLookingUp && <span style={{ color: '#888' }}>Clozet에서 콘텐츠 조회 중...</span>}
                   {!clozetLookingUp && clozetContent?.found && (
-                    <span style={{ color: '#16a34a' }}>
-                      Clozet 콘텐츠 발견! — app.clozet.my/reel/{clozetContent.short_code}
-                    </span>
+                    <span style={{ color: '#16a34a' }}>Clozet 콘텐츠 발견! — app.clozet.my/reel/{clozetContent.short_code}</span>
                   )}
                   {!clozetLookingUp && clozetContent && !clozetContent.found && (
-                    <span style={{ color: '#dc2626' }}>
-                      Clozet에 등록되지 않은 릴스입니다. 제품 링크를 직접 입력해주세요.
-                    </span>
+                    <span style={{ color: '#dc2626' }}>Clozet에 등록되지 않은 릴스입니다. 제품 링크를 직접 입력해주세요.</span>
                   )}
                 </div>
               )}
             </div>
 
+            {/* 댓글 자동화 전용 필드 */}
+            {campaignType === 'comment_automation' && (
+              <>
+                <div>
+                  <input
+                    placeholder="트리거 키워드 (콤마로 구분, 예: 링크, LINK, 정보)"
+                    value={form.trigger_keywords}
+                    onChange={(e) => setForm({ ...form, trigger_keywords: e.target.value })}
+                    style={inputStyle}
+                  />
+                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#888' }}>
+                    댓글에 이 키워드가 포함되면 자동으로 DM과 답글이 발송됩니다.
+                  </p>
+                </div>
+                <textarea
+                  placeholder="공개 댓글 답글 (예: DM으로 링크 보내드렸어요! 확인해보세요 😊)"
+                  value={form.comment_reply_message}
+                  onChange={(e) => setForm({ ...form, comment_reply_message: e.target.value })}
+                  style={{ ...inputStyle, height: '70px', resize: 'vertical' }}
+                />
+              </>
+            )}
+
+            {/* 공통: DM 메시지 */}
             <textarea
               placeholder="자동 DM 메시지 (예: 안녕하세요! 요청하신 제품 링크 보내드려요)"
               value={form.response_message}
@@ -441,6 +546,7 @@ export default function Dashboard() {
               style={{ ...inputStyle, height: '80px', resize: 'vertical' }}
             />
 
+            {/* 공통: 제품 URL */}
             <div>
               <input
                 placeholder="제품 URL (https://your-store.com/product)"
@@ -451,16 +557,20 @@ export default function Dashboard() {
                   backgroundColor: clozetContent?.found ? '#f0fdf4' : 'white',
                   color: clozetContent?.found ? '#15803d' : '#333',
                 }}
-                readOnly={clozetContent?.found === true}
+                readOnly={campaignType === 'reel_share' && clozetContent?.found === true}
               />
-              {clozetContent?.found && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#16a34a' }}>
-                  Clozet 릴스 페이지로 자동 설정됨
-                </p>
+              {campaignType === 'reel_share' && clozetContent?.found && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#16a34a' }}>Clozet 릴스 페이지로 자동 설정됨</p>
               )}
             </div>
 
-            <button onClick={createCampaign} style={{ padding: '10px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+            <button
+              onClick={createCampaign}
+              style={{
+                padding: '10px', border: 'none', borderRadius: '6px', cursor: 'pointer', color: 'white',
+                backgroundColor: campaignType === 'comment_automation' ? '#7C3AED' : '#333',
+              }}
+            >
               생성하기
             </button>
           </div>
@@ -478,31 +588,63 @@ export default function Dashboard() {
             const hasQueue = cs && (cs.queuePending > 0 || cs.queueSending > 0);
 
             return (
-              <div key={c.id} style={{ border: '1px solid #eee', borderRadius: '8px', padding: '16px', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                key={c.id}
+                style={{
+                  border: `1px solid ${c.campaign_type === 'comment_automation' ? '#ede9fe' : '#eee'}`,
+                  borderRadius: '8px', padding: '16px', marginBottom: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{c.reel_url}</p>
-                    <p style={{ color: '#666', margin: '0 0 4px 0', fontSize: '14px' }}>{c.response_message}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <p style={{ color: '#888', margin: 0, fontSize: '12px' }}>{c.product_url}</p>
+                    {/* 캠페인 타입 배지 */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{
+                        fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold',
+                        backgroundColor: c.campaign_type === 'comment_automation' ? '#EDE9FE' : '#FFF0F5',
+                        color: c.campaign_type === 'comment_automation' ? '#7C3AED' : '#E1306C',
+                      }}>
+                        {c.campaign_type === 'comment_automation' ? '댓글 자동화' : '릴스 공유 DM'}
+                      </span>
                       {c.product_url_source === 'clozet' && (
-                        <span style={{ fontSize: '11px', padding: '1px 6px', backgroundColor: '#1a1a2e', color: 'white', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '11px', padding: '2px 6px', backgroundColor: '#1a1a2e', color: 'white', borderRadius: '4px' }}>
                           Clozet
                         </span>
                       )}
                     </div>
+
+                    <p style={{ fontWeight: 'bold', margin: '0 0 4px 0', fontSize: '14px' }}>{c.reel_url}</p>
+
+                    {/* 댓글 자동화 전용: 키워드 표시 */}
+                    {c.campaign_type === 'comment_automation' && c.trigger_keywords?.length > 0 && (
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', margin: '4px 0' }}>
+                        {c.trigger_keywords.map((kw) => (
+                          <span key={kw} style={{
+                            fontSize: '11px', padding: '2px 8px', backgroundColor: '#f3f4f6',
+                            color: '#374151', borderRadius: '4px', border: '1px solid #e5e7eb',
+                          }}>
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 댓글 자동화 전용: 댓글 답글 내용 */}
+                    {c.campaign_type === 'comment_automation' && c.comment_reply_message && (
+                      <p style={{ color: '#7C3AED', margin: '2px 0 4px 0', fontSize: '13px' }}>
+                        답글: {c.comment_reply_message}
+                      </p>
+                    )}
+
+                    <p style={{ color: '#666', margin: '0 0 2px 0', fontSize: '13px' }}>{c.response_message}</p>
+                    <p style={{ color: '#888', margin: 0, fontSize: '12px' }}>{c.product_url}</p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
                     <button
                       onClick={() => toggleCampaign(c.id, c.is_active)}
                       style={{
-                        padding: '6px 16px',
-                        backgroundColor: c.is_active ? '#4CAF50' : '#ccc',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
+                        padding: '6px 16px', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '12px',
+                        backgroundColor: c.is_active ? '#4CAF50' : '#ccc', color: 'white',
                       }}
                     >
                       {c.is_active ? 'ON' : 'OFF'}
@@ -510,13 +652,8 @@ export default function Dashboard() {
                     <button
                       onClick={() => deleteCampaign(c.id)}
                       style={{
-                        padding: '6px 10px',
-                        backgroundColor: 'white',
-                        color: '#999',
-                        border: '1px solid #ddd',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
+                        padding: '6px 10px', backgroundColor: 'white', color: '#999',
+                        border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer', fontSize: '12px',
                       }}
                     >
                       삭제
@@ -527,11 +664,19 @@ export default function Dashboard() {
                 {/* Per-campaign stats */}
                 {cs && (
                   <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f0f0f0' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                      <MiniStat label="공유 수" value={cs.shares} />
-                      <MiniStat label="DM 발송" value={cs.dmsSent} />
-                      <MiniStat label="링크 클릭" value={cs.clicks} />
-                    </div>
+                    {c.campaign_type === 'comment_automation' ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        <MiniStat label="댓글 감지" value={cs.commentCount} />
+                        <MiniStat label="DM 발송" value={cs.dmsSent} />
+                        <MiniStat label="링크 클릭" value={cs.clicks} />
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        <MiniStat label="공유 수" value={cs.shares} />
+                        <MiniStat label="DM 발송" value={cs.dmsSent} />
+                        <MiniStat label="링크 클릭" value={cs.clicks} />
+                      </div>
+                    )}
 
                     {/* Queue progress bar */}
                     {hasQueue && (
@@ -539,13 +684,16 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666', marginBottom: '4px' }}>
                           <span>발송 진행 중</span>
                           <span style={{ fontWeight: 'bold' }}>
-                            {cs.dmsSent} / {cs.shares}
+                            {cs.dmsSent} / {c.campaign_type === 'comment_automation' ? cs.commentCount : cs.shares}
                           </span>
                         </div>
                         <div style={{ height: '6px', backgroundColor: '#f0f0f0', borderRadius: '3px', overflow: 'hidden' }}>
                           <div
                             style={{
-                              width: cs.shares > 0 ? `${(cs.dmsSent / cs.shares) * 100}%` : '0%',
+                              width: (() => {
+                                const total = c.campaign_type === 'comment_automation' ? cs.commentCount : cs.shares;
+                                return total > 0 ? `${(cs.dmsSent / total) * 100}%` : '0%';
+                              })(),
                               height: '100%',
                               backgroundColor: '#7C3AED',
                               borderRadius: '3px',

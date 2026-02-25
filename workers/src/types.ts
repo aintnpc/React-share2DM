@@ -15,7 +15,15 @@ export interface WebhookBody {
 
 export interface WebhookChange {
   field: string;
-  value: MessagingEvent;
+  value: MessagingEvent | CommentChangeValue;
+}
+
+export interface CommentChangeValue {
+  id: string; // comment_id
+  text: string;
+  from: { id: string; username?: string };
+  media: { id: string };
+  parent_id?: string; // 대댓글이면 존재
 }
 
 export interface WebhookEntry {
@@ -71,6 +79,20 @@ export interface Campaign {
   product_url: string;
   is_active: boolean;
   created_at: string;
+  campaign_type: 'reel_share' | 'comment_automation';
+  trigger_keywords: string[];
+  comment_reply_message: string | null;
+}
+
+export interface CommentLog {
+  id: string;
+  campaign_id: string;
+  brand_id: string;
+  commenter_ig_id: string;
+  comment_id: string;
+  comment_text: string | null;
+  comment_replied_at: string | null;
+  created_at: string;
 }
 
 export interface DmLog {
@@ -89,6 +111,7 @@ export interface DmQueue {
   campaign_id: string;
   sender_ig_id: string;
   ig_contents_id: string;
+  mid: string | null;
   message: string;
   access_token: string;
   status: 'pending' | 'sending' | 'sent' | 'failed';
