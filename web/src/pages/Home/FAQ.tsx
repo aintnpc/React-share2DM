@@ -13,7 +13,7 @@ const faqsKo = [
   },
   {
     q: "비공개 계정인 사용자가 공유해도 작동하나요?",
-    a: "인스타그램의 개인정보 보호 정책상 비공개 계정의 릴스 활동 내역은 API로 전달되지 않습니다. 이 경우, 해당 사용자에게 '계정을 공개로 전환해야 링크를 받을 수 있습니다'라는 안내 메시지가 자동으로 전송되어 이탈을 방지합니다."
+    a: "네, 정상적으로 작동합니다. 사용자가 먼저 릴스를 브랜드 DM으로 공유하는 순간 대화가 시작된 것이므로, 비공개 계정이어도 브랜드가 답장하는 데 아무런 제한이 없습니다."
   },
   {
     q: "설정하는 데 개발 지식이 필요한가요?",
@@ -32,7 +32,7 @@ const faqsEn = [
   },
   {
     q: "Does it work when a private account user shares?",
-    a: "Due to Instagram's privacy policies, Reels activity from private accounts isn't delivered via the API. In this case, an automated message is sent to the user informing them they need to switch to a public account to receive the link, preventing drop-off."
+    a: "Yes, it works perfectly. The moment a user shares a Reel to the brand's DM, they've initiated the conversation — so there's no restriction on the brand replying, regardless of the user's account privacy setting."
   },
   {
     q: "Do I need technical knowledge to set it up?",
