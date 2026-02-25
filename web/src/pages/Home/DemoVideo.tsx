@@ -27,6 +27,7 @@ const DemoVideo = () => {
             className="w-full"
             controls
             playsInline
+            muted
           >
             <source src="/share2dm.mp4" type="video/mp4" />
           </video>
