@@ -1,4 +1,3 @@
-import { Play } from 'lucide-react';
 import { useLang } from '../../lib/i18n';
 
 const DemoVideo = () => {
@@ -24,12 +23,13 @@ const DemoVideo = () => {
             </div>
           </div>
 
-          <div className="aspect-video bg-gradient-to-br from-[#0B0914] to-[#1a1433] flex items-center justify-center relative">
-            <button className="flex items-center justify-center w-20 h-20 bg-purple-600/90 rounded-full backdrop-blur-md shadow-[0_0_30px_rgba(147,51,234,0.5)] hover:scale-110 transition-transform cursor-pointer z-10">
-              <Play className="w-8 h-8 text-white ml-1" />
-            </button>
-            <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
-          </div>
+          <video
+            className="w-full"
+            controls
+            playsInline
+          >
+            <source src="/share2dm.mp4" type="video/mp4" />
+          </video>
         </div>
       </div>
     </section>
