@@ -122,7 +122,8 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
       }),
     }
   );
-  const subData = await subRes.json();
+  const subData = await subRes.json() as { success?: boolean };
+  const webhookSubscribed = subData.success === true;
   console.log('[OAuth] subscribed_apps response:', JSON.stringify(subData));
 
   // 6. Save brand to Supabase (use page token for DM sending)
@@ -150,7 +151,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
     throw new Error(error.message);
   }
 
-  return brand;
+  return { brand, webhookSubscribed };
 }
 
 // GET /auth/callback — Facebook redirects here with ?code=...&state=...
@@ -175,11 +176,12 @@ export async function handleOAuthCallbackGet(
     console.log('[OAuth] request.url:', request.url);
     console.log('[OAuth] url.origin:', url.origin);
     console.log('[OAuth] redirectUri for token exchange:', redirectUri);
-    const brand = await processOAuth(code, redirectUri, env);
+    const { brand, webhookSubscribed } = await processOAuth(code, redirectUri, env);
 
     const params = new URLSearchParams({
       brand_id: brand.id,
       brand_name: brand.brand_name,
+      webhook_subscribed: webhookSubscribed ? 'true' : 'false',
     });
     return Response.redirect(`${frontendOrigin}/auth/callback?${params}`, 302);
   } catch (err: any) {
@@ -200,7 +202,7 @@ export async function handleOAuthCallback(
 
   try {
     const body: { code: string; redirect_uri: string } = await request.json();
-    const brand = await processOAuth(body.code, body.redirect_uri, env);
+    const { brand } = await processOAuth(body.code, body.redirect_uri, env);
 
     return new Response(
       JSON.stringify({

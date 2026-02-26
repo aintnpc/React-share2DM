@@ -90,6 +90,45 @@ async function handleDebugSubscriptions(env: Env): Promise<Response> {
   });
 }
 
+// /media-list?brand_id=... → brand의 최근 미디어 목록 반환 (릴/포스트 선택 UI용)
+async function handleMediaList(url: URL, env: Env): Promise<Response> {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+  };
+
+  const brandId = url.searchParams.get('brand_id');
+  if (!brandId) {
+    return new Response(JSON.stringify({ error: 'brand_id required' }), { status: 400, headers });
+  }
+
+  try {
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+    const { data: brand } = await supabase
+      .from('share2dm_brands')
+      .select('ig_account_id, ig_access_token')
+      .eq('id', brandId)
+      .single();
+
+    if (!brand) {
+      return new Response(JSON.stringify({ error: 'brand not found' }), { status: 404, headers });
+    }
+
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${brand.ig_account_id}/media?fields=id,shortcode,media_type,thumbnail_url,media_url,timestamp,permalink&limit=20&access_token=${brand.ig_access_token}`
+    );
+    const data = await res.json() as { data?: any[]; error?: { message: string } };
+
+    if (data.error) {
+      return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers });
+    }
+
+    return new Response(JSON.stringify({ media: data.data ?? [] }), { status: 200, headers });
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+  }
+}
+
 // /media-id?brand_id=...&url=... → brand의 access token으로 media 조회 → ig_contents_id 반환
 async function handleMediaId(url: URL, env: Env): Promise<Response> {
   const headers = {
@@ -203,6 +242,11 @@ export default {
       // media-id: brand의 access token으로 shortcode → media_id (GET /media-id?brand_id=...&url=...)
       if (url.pathname === '/media-id' && request.method === 'GET') {
         return handleMediaId(url, env);
+      }
+
+      // media-list: brand의 최근 미디어 목록 (GET /media-list?brand_id=...)
+      if (url.pathname === '/media-list' && request.method === 'GET') {
+        return handleMediaList(url, env);
       }
 
       // Clozet B.O에서 연결 완료 후 리다이렉트 (GET /auth/clozet/callback?token=...&brand_id=...&state=...&origin=...)

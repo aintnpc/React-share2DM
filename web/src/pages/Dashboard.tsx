@@ -38,6 +38,16 @@ interface ClozetContent {
   clozet_url?: string;
 }
 
+interface MediaItem {
+  id: string;
+  shortcode: string;
+  media_type: string;
+  thumbnail_url?: string;
+  media_url?: string;
+  timestamp: string;
+  permalink: string;
+}
+
 export default function Dashboard() {
   const brandId = localStorage.getItem('brand_id');
   const brandName = localStorage.getItem('brand_name') || 'My Brand';
@@ -86,16 +96,44 @@ export default function Dashboard() {
     }
   }, []);
 
+  const [igAccountId, setIgAccountId] = useState<string | null>(null);
+  const [reelLookup, setReelLookup] = useState<{ loading: boolean; mediaId: string | null; error: string | null }>({ loading: false, mediaId: null, error: null });
+
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
+  const [mediaListLoading, setMediaListLoading] = useState(false);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+
+  const loadMediaList = async () => {
+    setShowMediaPicker(true);
+    if (mediaList.length > 0) return; // 이미 로드된 경우 재사용
+    setMediaListLoading(true);
+    try {
+      const res = await fetch(`${WORKERS_URL}/media-list?brand_id=${brandId}`);
+      const data = await res.json() as { media?: MediaItem[]; error?: string };
+      if (data.media) setMediaList(data.media);
+    } catch {
+      // ignore
+    } finally {
+      setMediaListLoading(false);
+    }
+  };
+
+  const selectMedia = (item: MediaItem) => {
+    handleReelUrlChange(item.permalink);
+    setShowMediaPicker(false);
+  };
+
   const loadBrandInfo = useCallback(async () => {
     const { data } = await supabase
       .from('share2dm_brands')
-      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4')
+      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4, ig_account_id')
       .eq('id', brandId)
       .single();
     if (data) {
       setBrandPlan(data.plan as PlanName);
       setClozetStoreName(data.clozet_store_name ?? null);
       setBillingCardLast4(data.billing_card_last4 ?? null);
+      setIgAccountId(data.ig_account_id ?? null);
     }
   }, [brandId]);
 
@@ -269,9 +307,28 @@ export default function Dashboard() {
   const handleReelUrlChange = async (reelUrl: string) => {
     setForm(prev => ({ ...prev, reel_url: reelUrl, product_url: '' }));
     setClozetContent(null);
-    if (!clozetStoreName) return;
+    setReelLookup({ loading: false, mediaId: null, error: null });
+
     const shortCode = extractShortCode(reelUrl);
     if (!shortCode || shortCode.length < 5) return;
+
+    // Fetch media ID to verify the reel exists on this IG account
+    setReelLookup({ loading: true, mediaId: null, error: null });
+    try {
+      const res = await fetch(
+        `${WORKERS_URL}/media-id?brand_id=${brandId}&url=${encodeURIComponent(reelUrl)}`
+      );
+      const data = await res.json() as { media_id?: string; error?: string };
+      if (data.media_id) {
+        setReelLookup({ loading: false, mediaId: data.media_id, error: null });
+      } else {
+        setReelLookup({ loading: false, mediaId: null, error: data.error ?? 'Reel not found' });
+      }
+    } catch {
+      setReelLookup({ loading: false, mediaId: null, error: 'Lookup failed' });
+    }
+
+    if (!clozetStoreName) return;
     setClozetLookingUp(true);
     try {
       const res = await fetch(
@@ -425,7 +482,16 @@ export default function Dashboard() {
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
           <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#888', fontWeight: '600' }}>연결된 플랫폼</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '13px', color: '#444' }}>Instagram</span>
+            <span style={{ fontSize: '13px', color: '#444' }}>
+              Instagram
+              {brandName ? <span> · @{brandName}</span> : ''}
+              {igAccountId ? <span style={{ color: '#888' }}> · {igAccountId}</span> : ''}
+            </span>
+            {igAccountId && (
+              <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ fontSize: '14px' }}>✓</span> Webhook 구독됨
+              </span>
+            )}
             {clozetStoreName ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#444' }}>
@@ -494,14 +560,96 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* 공통: 게시물/릴스 URL */}
             <div>
-              <input
-                placeholder={campaignType === 'comment_automation'
-                  ? '게시물 URL (https://instagram.com/p/... 또는 /reel/...)'
-                  : '릴스 URL (https://instagram.com/reel/...)'}
-                value={form.reel_url}
-                onChange={(e) => handleReelUrlChange(e.target.value)}
-                style={inputStyle}
-              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  placeholder={campaignType === 'comment_automation'
+                    ? '게시물 URL (https://instagram.com/p/... 또는 /reel/...)'
+                    : '릴스 URL (https://instagram.com/reel/...)'}
+                  value={form.reel_url}
+                  onChange={(e) => handleReelUrlChange(e.target.value)}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={loadMediaList}
+                  style={{
+                    padding: '0 14px', border: '1px solid #ddd', borderRadius: '6px',
+                    fontSize: '12px', cursor: 'pointer', backgroundColor: '#f9f9f9',
+                    color: '#444', whiteSpace: 'nowrap', flexShrink: 0,
+                  }}
+                >
+                  목록에서 선택
+                </button>
+              </div>
+
+              {/* 미디어 피커 */}
+              {showMediaPicker && (
+                <div style={{ marginTop: '10px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#333' }}>내 Instagram 게시물</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowMediaPicker(false)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#888', lineHeight: 1 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {mediaListLoading ? (
+                    <p style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '13px' }}>불러오는 중...</p>
+                  ) : mediaList.length === 0 ? (
+                    <p style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '13px' }}>게시물이 없습니다.</p>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', padding: '2px', maxHeight: '280px', overflowY: 'auto' }}>
+                      {mediaList.map((item) => {
+                        const thumb = item.thumbnail_url || item.media_url;
+                        const date = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => selectMedia(item)}
+                            style={{
+                              position: 'relative', aspectRatio: '1', overflow: 'hidden',
+                              border: 'none', cursor: 'pointer', background: '#f0f0f0', padding: 0,
+                            }}
+                            title={`${item.shortcode} · ${date}`}
+                          >
+                            {thumb ? (
+                              <img src={thumb} alt={item.shortcode} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#888' }}>
+                                {item.media_type === 'REEL' ? '🎬' : '🖼️'}
+                              </div>
+                            )}
+                            <span style={{
+                              position: 'absolute', bottom: 0, left: 0, right: 0,
+                              backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
+                              fontSize: '10px', padding: '3px 4px', textAlign: 'center',
+                            }}>
+                              {date}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Reel lookup status */}
+              {reelLookup.loading && (
+                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#888' }}>Fetching reel from your Instagram account...</p>
+              )}
+              {!reelLookup.loading && reelLookup.mediaId && (
+                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#16a34a' }}>
+                  ✓ Reel found on your Instagram account (ID: {reelLookup.mediaId})
+                </p>
+              )}
+              {!reelLookup.loading && reelLookup.error && (
+                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#dc2626' }}>
+                  ✗ {reelLookup.error}
+                </p>
+              )}
               {campaignType === 'reel_share' && clozetStoreName && (
                 <div style={{ marginTop: '6px', fontSize: '12px' }}>
                   {clozetLookingUp && <span style={{ color: '#888' }}>Clozet에서 콘텐츠 조회 중...</span>}
