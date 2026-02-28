@@ -65,6 +65,25 @@ const ClozetConnect = () => {
         </p>
       </div>
 
+      {/* Demo Video */}
+      <div className="relative z-10 w-full max-w-4xl mb-24">
+        <div className="rounded-xl border border-white/10 bg-[#151221] shadow-2xl overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-[#1D192B] border-b border-white/5">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500/80" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+              <div className="w-3 h-3 rounded-full bg-green-500/80" />
+            </div>
+            <div className="mx-auto flex px-4 py-1 text-xs text-gray-500 bg-[#0B0914] rounded-md border border-white/5">
+              clozet.my/connect
+            </div>
+          </div>
+          <video className="w-full" controls playsInline muted>
+            <source src="/clozet%20connect.mp4" type="video/mp4" />
+          </video>
+        </div>
+      </div>
+
       {/* How it works — 3 steps */}
       <div className="relative z-10 w-full max-w-5xl mb-24">
         <h2 className="text-2xl font-bold text-white text-center mb-12">
@@ -96,48 +115,16 @@ const ClozetConnect = () => {
           {/* Phone frame */}
           <div className="relative mx-auto md:mx-0 shrink-0">
             <div className="w-[280px] h-[560px] rounded-[3rem] border-[3px] border-white/10 bg-gradient-to-b from-[#1a1630] to-[#0d0a1a] overflow-hidden relative shadow-2xl shadow-purple-500/10">
-              {/* Status bar */}
-              <div className="absolute top-0 inset-x-0 h-12 bg-black/30 flex items-center justify-center">
-                <div className="w-20 h-5 bg-black rounded-full" />
-              </div>
-              {/* Video placeholder */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <Play className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                  <p className="text-white/30 text-xs">{t('숏폼 영상 재생 중', 'Short-form video playing')}</p>
-                </div>
-              </div>
-              {/* Product stickers */}
-              <div className="absolute bottom-32 left-4 right-4 space-y-2">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 animate-pulse">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-400 to-purple-500" />
-                  <div className="flex-1">
-                    <p className="text-white text-xs font-medium">{t('상품 A', 'Product A')}</p>
-                    <p className="text-pink-300 text-[10px]">₩29,900</p>
-                  </div>
-                  <ArrowRight className="w-3 h-3 text-white/50" />
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-400 to-blue-500" />
-                  <div className="flex-1">
-                    <p className="text-white text-xs font-medium">{t('상품 B', 'Product B')}</p>
-                    <p className="text-indigo-300 text-[10px]">₩45,000</p>
-                  </div>
-                  <ArrowRight className="w-3 h-3 text-white/50" />
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-red-500" />
-                  <div className="flex-1">
-                    <p className="text-white text-xs font-medium">{t('상품 C', 'Product C')}</p>
-                    <p className="text-orange-300 text-[10px]">₩18,500</p>
-                  </div>
-                  <ArrowRight className="w-3 h-3 text-white/50" />
-                </div>
-              </div>
-              {/* Tap indicator */}
-              <div className="absolute bottom-16 inset-x-0 flex justify-center">
-                <span className="text-[10px] text-white/30 bg-white/5 px-3 py-1 rounded-full">{t('탭하여 상품 보기', 'Tap to see products')}</span>
-              </div>
+              <video
+                className="absolute inset-0 w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              >
+                <source src="/clozet%20connect%20mobile%20demo.MOV" type="video/quicktime" />
+                <source src="/clozet%20connect%20mobile%20demo.MOV" type="video/mp4" />
+              </video>
             </div>
           </div>
 
@@ -223,7 +210,7 @@ const ClozetConnect = () => {
           {/* D2C Store */}
           <div className="p-8 rounded-3xl bg-gradient-to-b from-purple-900/30 to-[#151221] border border-purple-500/30 flex flex-col relative overflow-hidden shadow-[0_0_40px_rgba(147,51,234,0.1)]">
             <div className="absolute top-0 inset-x-0 flex justify-center transform -translate-y-1/2">
-              <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">Pro</span>
+              <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">Growth</span>
             </div>
             <div className="flex items-center gap-3 mb-6 mt-2">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center">
@@ -231,7 +218,7 @@ const ClozetConnect = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">{t('자사몰 연결', 'Your Own Store')}</h3>
-                <span className="text-xs text-pink-400 font-medium">{t('Pro 플랜 필요', 'Pro Plan Required')}</span>
+                <span className="text-xs text-pink-400 font-medium">{t('Growth 플랜 필요', 'Growth Plan Required')}</span>
               </div>
             </div>
             <ul className="space-y-3 flex-1 mb-6">
@@ -252,7 +239,7 @@ const ClozetConnect = () => {
               onClick={() => navigate('/pricing')}
               className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20"
             >
-              {t('Pro 플랜 보기', 'View Pro Plan')} <ArrowRight className="inline w-4 h-4 ml-1" />
+              {t('Growth 플랜 보기', 'View Growth Plan')} <ArrowRight className="inline w-4 h-4 ml-1" />
             </button>
           </div>
         </div>
