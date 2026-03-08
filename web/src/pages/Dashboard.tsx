@@ -93,7 +93,7 @@ export default function Dashboard() {
 
     const error = params.get('clozet_error');
     if (error) {
-      alert(`${lang === 'ko' ? 'Clozet 연결 실패' : 'Clozet connection failed'}: ${error}`);
+      alert(`${localStorage.getItem('lang') === 'en' ? 'Clozet connection failed' : 'Clozet 연결 실패'}: ${error}`);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
