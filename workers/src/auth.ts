@@ -18,6 +18,11 @@ interface IGAccountResponse {
   }>;
 }
 
+interface IGUserResponse {
+  id: string;
+  username?: string;
+}
+
 // Common OAuth logic: exchange code → long-lived token → IG account → webhook → save brand
 async function processOAuth(code: string, redirectUri: string, env: Env) {
   // 1. Exchange code for short-lived token
@@ -110,6 +115,14 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
 
   console.log('[OAuth] Found page:', brandName, 'pageId:', pageId, 'hasPageToken:', !!pageWithIG.access_token);
 
+  // Fetch actual Instagram username
+  const igUserRes = await fetch(
+    `https://graph.facebook.com/v21.0/${igAccountId}?fields=username&access_token=${pageAccessToken}`
+  );
+  const igUserData: IGUserResponse = await igUserRes.json() as IGUserResponse;
+  const igUsername = igUserData.username ?? null;
+  console.log('[OAuth] IG username:', igUsername);
+
   // 5. Subscribe page to app for webhook delivery
   const subRes = await fetch(
     `https://graph.facebook.com/v21.0/${pageId}/subscribed_apps`,
@@ -141,6 +154,7 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
         ig_account_id: igAccountId,
         ig_access_token: pageAccessToken,
         token_expires_at: expiresAt,
+        ig_username: igUsername,
       },
       { onConflict: 'ig_account_id' }
     )

@@ -15,7 +15,16 @@ const LangContext = createContext<LangContextType>({
 });
 
 export const LangProvider = ({ children }: { children: ReactNode }) => {
-  const [lang, setLang] = useState<Lang>('ko');
+  const [lang, setLangState] = useState<Lang>(() => {
+    const saved = localStorage.getItem('lang');
+    return saved === 'en' ? 'en' : 'ko';
+  });
+
+  const setLang = (l: Lang) => {
+    localStorage.setItem('lang', l);
+    setLangState(l);
+  };
+
   const t = <T extends ReactNode>(ko: T, en: T): T => (lang === 'ko' ? ko : en);
 
   return (

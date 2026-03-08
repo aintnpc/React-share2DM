@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { PLAN_CONFIG, PlanName } from '../lib/plan-config';
+import { useLang } from '../lib/i18n';
 
 const WORKERS_URL = process.env.REACT_APP_WORKERS_URL ?? 'https://share2dm-webhook.share2dm.workers.dev';
 const CLOZET_BO_URL = process.env.REACT_APP_CLOZET_BO_URL ?? 'https://clozet.my';
@@ -49,6 +50,7 @@ interface MediaItem {
 }
 
 export default function Dashboard() {
+  const { lang, t } = useLang();
   const brandId = localStorage.getItem('brand_id');
   const brandName = localStorage.getItem('brand_name') || 'My Brand';
 
@@ -91,12 +93,13 @@ export default function Dashboard() {
 
     const error = params.get('clozet_error');
     if (error) {
-      alert(`Clozet 연결 실패: ${error}`);
+      alert(`${lang === 'ko' ? 'Clozet 연결 실패' : 'Clozet connection failed'}: ${error}`);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
   const [igAccountId, setIgAccountId] = useState<string | null>(null);
+  const [igUsername, setIgUsername] = useState<string | null>(null);
   const [reelLookup, setReelLookup] = useState<{ loading: boolean; mediaId: string | null; error: string | null }>({ loading: false, mediaId: null, error: null });
 
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
@@ -126,7 +129,7 @@ export default function Dashboard() {
   const loadBrandInfo = useCallback(async () => {
     const { data } = await supabase
       .from('share2dm_brands')
-      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4, ig_account_id')
+      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4, ig_account_id, ig_username')
       .eq('id', brandId)
       .single();
     if (data) {
@@ -134,6 +137,7 @@ export default function Dashboard() {
       setClozetStoreName(data.clozet_store_name ?? null);
       setBillingCardLast4(data.billing_card_last4 ?? null);
       setIgAccountId(data.ig_account_id ?? null);
+      setIgUsername(data.ig_username ?? null);
     }
   }, [brandId]);
 
@@ -288,7 +292,7 @@ export default function Dashboard() {
   };
 
   const handleClozetDisconnect = async () => {
-    if (!window.confirm('Clozet 연결을 해제하시겠습니까?')) return;
+    if (!window.confirm(lang === 'ko' ? 'Clozet 연결을 해제하시겠습니까?' : 'Disconnect Clozet?')) return;
     await supabase
       .from('share2dm_brands')
       .update({ clozet_seller_id: null, clozet_store_name: null, clozet_connected_at: null })
@@ -355,14 +359,16 @@ export default function Dashboard() {
   const createCampaign = async () => {
     const limits = PLAN_CONFIG[brandPlan];
     if (limits.maxCampaigns !== -1 && campaigns.length >= limits.maxCampaigns) {
-      alert(`현재 요금제(${brandPlan})에서는 캠페인을 ${limits.maxCampaigns}개까지만 만들 수 있습니다. 업그레이드해주세요.`);
+      alert(lang === 'ko'
+        ? `현재 요금제(${brandPlan})에서는 캠페인을 ${limits.maxCampaigns}개까지만 만들 수 있습니다. 업그레이드해주세요.`
+        : `Your current plan (${brandPlan}) allows up to ${limits.maxCampaigns} campaigns. Please upgrade.`);
       return;
     }
 
     const postUrl = form.reel_url;
     const shortCode = extractShortCode(postUrl);
     if (!shortCode) {
-      alert('올바른 릴스 또는 포스트 URL을 입력해주세요.');
+      alert(lang === 'ko' ? '올바른 릴스 또는 포스트 URL을 입력해주세요.' : 'Please enter a valid Reel or post URL.');
       return;
     }
 
@@ -373,19 +379,19 @@ export default function Dashboard() {
       );
       const data = await res.json() as { media_id?: string; error?: string };
       if (!data.media_id) {
-        alert(`미디어 ID를 가져올 수 없습니다: ${data.error ?? '알 수 없는 오류'}`);
+        alert(lang === 'ko' ? `미디어 ID를 가져올 수 없습니다: ${data.error ?? '알 수 없는 오류'}` : `Could not get media ID: ${data.error ?? 'Unknown error'}`);
         return;
       }
       mediaId = data.media_id;
     } catch {
-      alert('미디어 ID 조회 중 오류가 발생했습니다.');
+      alert(lang === 'ko' ? '미디어 ID 조회 중 오류가 발생했습니다.' : 'An error occurred while fetching the media ID.');
       return;
     }
 
     if (campaignType === 'comment_automation') {
       const keywords = form.trigger_keywords.split(',').map((k) => k.trim()).filter(Boolean);
       if (keywords.length === 0) {
-        alert('트리거 키워드를 최소 1개 이상 입력해주세요.');
+        alert(lang === 'ko' ? '트리거 키워드를 최소 1개 이상 입력해주세요.' : 'Please enter at least one trigger keyword.');
         return;
       }
       const { error } = await supabase.from('share2dm_campaigns').insert({
@@ -402,7 +408,7 @@ export default function Dashboard() {
       });
       if (error) {
         console.error('[Campaign] insert error:', error);
-        alert(`캠페인 생성 실패: ${error.message}`);
+        alert(lang === 'ko' ? `캠페인 생성 실패: ${error.message}` : `Failed to create campaign: ${error.message}`);
         return;
       }
     } else {
@@ -421,7 +427,7 @@ export default function Dashboard() {
       });
       if (error) {
         console.error('[Campaign] insert error:', error);
-        alert(`캠페인 생성 실패: ${error.message}`);
+        alert(lang === 'ko' ? `캠페인 생성 실패: ${error.message}` : `Failed to create campaign: ${error.message}`);
         return;
       }
     }
@@ -439,11 +445,14 @@ export default function Dashboard() {
   };
 
   const deleteCampaign = async (id: string) => {
-    if (!window.confirm('캠페인을 삭제하시겠습니까? DM 발송 기록도 함께 삭제됩니다.')) return;
+    if (!window.confirm(lang === 'ko' ? '캠페인을 삭제하시겠습니까? DM 발송 기록도 함께 삭제됩니다.' : 'Delete this campaign? DM send history will also be deleted.')) return;
     await supabase.from('share2dm_comment_logs').delete().eq('campaign_id', id);
     await supabase.from('share2dm_dm_logs').delete().eq('campaign_id', id);
-    await supabase.from('share2dm_dm_queue').delete().eq('campaign_id', id);
-    await supabase.from('share2dm_campaigns').delete().eq('id', id);
+    const { error } = await supabase.from('share2dm_campaigns').delete().eq('id', id);
+    if (error) {
+      alert((lang === 'ko' ? '캠페인 삭제 중 오류가 발생했습니다: ' : 'Error deleting campaign: ') + error.message);
+      return;
+    }
     loadCampaigns();
   };
 
@@ -455,7 +464,7 @@ export default function Dashboard() {
           onClick={() => setShowForm(!showForm)}
           style={{ padding: '10px 20px', backgroundColor: '#E1306C', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
         >
-          + 캠페인 생성
+          {t('+ 캠페인 생성', '+ New Campaign')}
         </button>
       </header>
 
@@ -472,24 +481,24 @@ export default function Dashboard() {
             )}
           </div>
           <a href="/pricing" style={{ color: '#E1306C', textDecoration: 'none', fontSize: '14px' }}>
-            요금제 변경 →
+            {t('요금제 변경 →', 'Change Plan →')}
           </a>
         </div>
-        <UsageBar label="이번 달 DM 발송" used={dmUsage.used} limit={dmUsage.limit} />
-        <UsageBar label="캠페인" used={campaignUsage.used} limit={campaignUsage.limit} style={{ marginTop: '12px' }} />
+        <UsageBar label={t('이번 달 DM 발송', 'DMs Sent This Month')} used={dmUsage.used} limit={dmUsage.limit} />
+        <UsageBar label={t('캠페인', 'Campaigns')} used={campaignUsage.used} limit={campaignUsage.limit} style={{ marginTop: '12px' }} />
 
         {/* 연결된 플랫폼 */}
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
-          <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#888', fontWeight: '600' }}>연결된 플랫폼</p>
+          <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#888', fontWeight: '600' }}>{t('연결된 플랫폼', 'Connected Platforms')}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '13px', color: '#444' }}>
               Instagram
-              {brandName ? <span> · @{brandName}</span> : ''}
+              {igUsername ? <span> · @{igUsername}</span> : brandName ? <span> · @{brandName}</span> : ''}
               {igAccountId ? <span style={{ color: '#888' }}> · {igAccountId}</span> : ''}
             </span>
             {igAccountId && (
               <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <span style={{ fontSize: '14px' }}>✓</span> Webhook 구독됨
+                <span style={{ fontSize: '14px' }}>✓</span> {t('Webhook 구독됨', 'Webhook subscribed')}
               </span>
             )}
             {clozetStoreName ? (
@@ -501,7 +510,7 @@ export default function Dashboard() {
                   onClick={handleClozetDisconnect}
                   style={{ fontSize: '11px', color: '#999', background: 'none', border: '1px solid #ddd', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer' }}
                 >
-                  연결 해제
+                  {t('연결 해제', 'Disconnect')}
                 </button>
               </div>
             ) : (
@@ -514,7 +523,7 @@ export default function Dashboard() {
                   color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer',
                 }}
               >
-                {clozetConnecting ? '연결 중...' : 'Clozet 연결하기'}
+                {clozetConnecting ? t('연결 중...', 'Connecting...') : t('Clozet 연결하기', 'Connect Clozet')}
               </button>
             )}
           </div>
@@ -523,15 +532,15 @@ export default function Dashboard() {
 
       {/* Stats Overview */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '30px' }}>
-        <StatCard label="총 공유 수" value={totalStats.shares} />
-        <StatCard label="DM 발송 수" value={totalStats.dmsSent} />
-        <StatCard label="링크 클릭 수" value={totalStats.clicks} />
+        <StatCard label={t('총 공유 수', 'Total Shares')} value={totalStats.shares} />
+        <StatCard label={t('DM 발송 수', 'DMs Sent')} value={totalStats.dmsSent} />
+        <StatCard label={t('링크 클릭 수', 'Link Clicks')} value={totalStats.clicks} />
       </div>
 
       {/* Campaign Form */}
       {showForm && (
         <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', marginBottom: '20px' }}>
-          <h3 style={{ margin: '0 0 16px 0' }}>새 캠페인</h3>
+          <h3 style={{ margin: '0 0 16px 0' }}>{t('새 캠페인', 'New Campaign')}</h3>
 
           {/* 캠페인 타입 탭 */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
@@ -543,7 +552,7 @@ export default function Dashboard() {
                 color: campaignType === 'reel_share' ? 'white' : '#666',
               }}
             >
-              릴스 공유 DM
+              {t('릴스 공유 DM', 'Reel Share DM')}
             </button>
             <button
               onClick={() => setCampaignType('comment_automation')}
@@ -553,7 +562,7 @@ export default function Dashboard() {
                 color: campaignType === 'comment_automation' ? 'white' : '#666',
               }}
             >
-              댓글 자동화
+              {t('댓글 자동화', 'Comment Automation')}
             </button>
           </div>
 
@@ -563,8 +572,8 @@ export default function Dashboard() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   placeholder={campaignType === 'comment_automation'
-                    ? '게시물 URL (https://instagram.com/p/... 또는 /reel/...)'
-                    : '릴스 URL (https://instagram.com/reel/...)'}
+                    ? t('게시물 URL (https://instagram.com/p/... 또는 /reel/...)', 'Post URL (https://instagram.com/p/... or /reel/...)')
+                    : t('릴스 URL (https://instagram.com/reel/...)', 'Reel URL (https://instagram.com/reel/...)')}
                   value={form.reel_url}
                   onChange={(e) => handleReelUrlChange(e.target.value)}
                   style={{ ...inputStyle, flex: 1 }}
@@ -578,7 +587,7 @@ export default function Dashboard() {
                     color: '#444', whiteSpace: 'nowrap', flexShrink: 0,
                   }}
                 >
-                  목록에서 선택
+                  {t('목록에서 선택', 'Pick from list')}
                 </button>
               </div>
 
@@ -586,7 +595,7 @@ export default function Dashboard() {
               {showMediaPicker && (
                 <div style={{ marginTop: '10px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#333' }}>내 Instagram 게시물</span>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#333' }}>{t('내 Instagram 게시물', 'My Instagram Posts')}</span>
                     <button
                       type="button"
                       onClick={() => setShowMediaPicker(false)}
@@ -596,14 +605,14 @@ export default function Dashboard() {
                     </button>
                   </div>
                   {mediaListLoading ? (
-                    <p style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '13px' }}>불러오는 중...</p>
+                    <p style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '13px' }}>{t('불러오는 중...', 'Loading...')}</p>
                   ) : mediaList.length === 0 ? (
-                    <p style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '13px' }}>게시물이 없습니다.</p>
+                    <p style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '13px' }}>{t('게시물이 없습니다.', 'No posts found.')}</p>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', padding: '2px', maxHeight: '280px', overflowY: 'auto' }}>
                       {mediaList.map((item) => {
                         const thumb = item.thumbnail_url || item.media_url;
-                        const date = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+                        const date = new Date(item.timestamp).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric' });
                         return (
                           <button
                             key={item.id}
@@ -652,12 +661,12 @@ export default function Dashboard() {
               )}
               {campaignType === 'reel_share' && clozetStoreName && (
                 <div style={{ marginTop: '6px', fontSize: '12px' }}>
-                  {clozetLookingUp && <span style={{ color: '#888' }}>Clozet에서 콘텐츠 조회 중...</span>}
+                  {clozetLookingUp && <span style={{ color: '#888' }}>{t('Clozet에서 콘텐츠 조회 중...', 'Looking up Clozet content...')}</span>}
                   {!clozetLookingUp && clozetContent?.found && (
-                    <span style={{ color: '#16a34a' }}>Clozet 콘텐츠 발견! — app.clozet.my/reel/{clozetContent.short_code}</span>
+                    <span style={{ color: '#16a34a' }}>{t('Clozet 콘텐츠 발견! — ', 'Clozet content found! — ')}app.clozet.my/reel/{clozetContent.short_code}</span>
                   )}
                   {!clozetLookingUp && clozetContent && !clozetContent.found && (
-                    <span style={{ color: '#dc2626' }}>Clozet에 등록되지 않은 릴스입니다. 제품 링크를 직접 입력해주세요.</span>
+                    <span style={{ color: '#dc2626' }}>{t('Clozet에 등록되지 않은 릴스입니다. 제품 링크를 직접 입력해주세요.', 'This Reel is not registered in Clozet. Please enter the product link manually.')}</span>
                   )}
                 </div>
               )}
@@ -668,17 +677,17 @@ export default function Dashboard() {
               <>
                 <div>
                   <input
-                    placeholder="트리거 키워드 (콤마로 구분, 예: 링크, LINK, 정보)"
+                    placeholder={t('트리거 키워드 (콤마로 구분, 예: 링크, LINK, 정보)', 'Trigger keywords (comma-separated, e.g. link, LINK, info)')}
                     value={form.trigger_keywords}
                     onChange={(e) => setForm({ ...form, trigger_keywords: e.target.value })}
                     style={inputStyle}
                   />
                   <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#888' }}>
-                    댓글에 이 키워드가 포함되면 자동으로 DM과 답글이 발송됩니다.
+                    {t('댓글에 이 키워드가 포함되면 자동으로 DM과 답글이 발송됩니다.', 'When a comment contains these keywords, a DM and reply will be sent automatically.')}
                   </p>
                 </div>
                 <textarea
-                  placeholder="공개 댓글 답글 (예: DM으로 링크 보내드렸어요! 확인해보세요 😊)"
+                  placeholder={t('공개 댓글 답글 (예: DM으로 링크 보내드렸어요! 확인해보세요 😊)', 'Public comment reply (e.g. Sent you the link via DM! Check it out 😊)')}
                   value={form.comment_reply_message}
                   onChange={(e) => setForm({ ...form, comment_reply_message: e.target.value })}
                   style={{ ...inputStyle, height: '70px', resize: 'vertical' }}
@@ -688,7 +697,7 @@ export default function Dashboard() {
 
             {/* 공통: DM 메시지 */}
             <textarea
-              placeholder="자동 DM 메시지 (예: 안녕하세요! 요청하신 제품 링크 보내드려요)"
+              placeholder={t('자동 DM 메시지 (예: 안녕하세요! 요청하신 제품 링크 보내드려요)', 'Auto DM message (e.g. Hi! Here\'s the product link you requested)')}
               value={form.response_message}
               onChange={(e) => setForm({ ...form, response_message: e.target.value })}
               style={{ ...inputStyle, height: '80px', resize: 'vertical' }}
@@ -697,7 +706,7 @@ export default function Dashboard() {
             {/* 공통: 제품 URL */}
             <div>
               <input
-                placeholder="제품 URL (https://your-store.com/product)"
+                placeholder={t('제품 URL (https://your-store.com/product)', 'Product URL (https://your-store.com/product)')}
                 value={form.product_url}
                 onChange={(e) => setForm({ ...form, product_url: e.target.value })}
                 style={{
@@ -708,7 +717,7 @@ export default function Dashboard() {
                 readOnly={campaignType === 'reel_share' && clozetContent?.found === true}
               />
               {campaignType === 'reel_share' && clozetContent?.found && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#16a34a' }}>Clozet 릴스 페이지로 자동 설정됨</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#16a34a' }}>{t('Clozet 릴스 페이지로 자동 설정됨', 'Auto-set to Clozet reel page')}</p>
               )}
             </div>
 
@@ -719,7 +728,7 @@ export default function Dashboard() {
                 backgroundColor: campaignType === 'comment_automation' ? '#7C3AED' : '#333',
               }}
             >
-              생성하기
+              {t('생성하기', 'Create')}
             </button>
           </div>
         </div>
@@ -727,9 +736,9 @@ export default function Dashboard() {
 
       {/* Campaign List */}
       <div>
-        <h2>캠페인 목록</h2>
+        <h2>{t('캠페인 목록', 'Campaigns')}</h2>
         {campaigns.length === 0 ? (
-          <p style={{ color: '#888' }}>아직 캠페인이 없습니다. 첫 캠페인을 만들어보세요!</p>
+          <p style={{ color: '#888' }}>{t('아직 캠페인이 없습니다. 첫 캠페인을 만들어보세요!', 'No campaigns yet. Create your first one!')}</p>
         ) : (
           campaigns.map((c) => {
             const cs = campaignStats[c.id];
@@ -752,7 +761,7 @@ export default function Dashboard() {
                         backgroundColor: c.campaign_type === 'comment_automation' ? '#EDE9FE' : '#FFF0F5',
                         color: c.campaign_type === 'comment_automation' ? '#7C3AED' : '#E1306C',
                       }}>
-                        {c.campaign_type === 'comment_automation' ? '댓글 자동화' : '릴스 공유 DM'}
+                        {c.campaign_type === 'comment_automation' ? t('댓글 자동화', 'Comment Automation') : t('릴스 공유 DM', 'Reel Share DM')}
                       </span>
                       {c.product_url_source === 'clozet' && (
                         <span style={{ fontSize: '11px', padding: '2px 6px', backgroundColor: '#1a1a2e', color: 'white', borderRadius: '4px' }}>
@@ -780,7 +789,7 @@ export default function Dashboard() {
                     {/* 댓글 자동화 전용: 댓글 답글 내용 */}
                     {c.campaign_type === 'comment_automation' && c.comment_reply_message && (
                       <p style={{ color: '#7C3AED', margin: '2px 0 4px 0', fontSize: '13px' }}>
-                        답글: {c.comment_reply_message}
+                        {t('답글: ', 'Reply: ')}{c.comment_reply_message}
                       </p>
                     )}
 
@@ -804,7 +813,7 @@ export default function Dashboard() {
                         border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer', fontSize: '12px',
                       }}
                     >
-                      삭제
+                      {t('삭제', 'Delete')}
                     </button>
                   </div>
                 </div>
@@ -814,15 +823,15 @@ export default function Dashboard() {
                   <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f0f0f0' }}>
                     {c.campaign_type === 'comment_automation' ? (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                        <MiniStat label="댓글 감지" value={cs.commentCount} />
-                        <MiniStat label="DM 발송" value={cs.dmsSent} />
-                        <MiniStat label="링크 클릭" value={cs.clicks} />
+                        <MiniStat label={t('댓글 감지', 'Comments')} value={cs.commentCount} />
+                        <MiniStat label={t('DM 발송', 'DMs Sent')} value={cs.dmsSent} />
+                        <MiniStat label={t('링크 클릭', 'Clicks')} value={cs.clicks} />
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                        <MiniStat label="공유 수" value={cs.shares} />
-                        <MiniStat label="DM 발송" value={cs.dmsSent} />
-                        <MiniStat label="링크 클릭" value={cs.clicks} />
+                        <MiniStat label={t('공유 수', 'Shares')} value={cs.shares} />
+                        <MiniStat label={t('DM 발송', 'DMs Sent')} value={cs.dmsSent} />
+                        <MiniStat label={t('링크 클릭', 'Clicks')} value={cs.clicks} />
                       </div>
                     )}
 
@@ -830,7 +839,7 @@ export default function Dashboard() {
                     {hasQueue && (
                       <div style={{ marginTop: '10px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                          <span>발송 진행 중</span>
+                          <span>{t('발송 진행 중', 'Sending in progress')}</span>
                           <span style={{ fontWeight: 'bold' }}>
                             {cs.dmsSent} / {c.campaign_type === 'comment_automation' ? cs.commentCount : cs.shares}
                           </span>
@@ -850,7 +859,7 @@ export default function Dashboard() {
                           />
                         </div>
                         <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#888' }}>
-                          대기 {cs.queuePending}건 | 발송 중 {cs.queueSending}건
+                          {t(`대기 ${cs.queuePending}건 | 발송 중 ${cs.queueSending}건`, `Queued: ${cs.queuePending} | Sending: ${cs.queueSending}`)}
                         </p>
                       </div>
                     )}

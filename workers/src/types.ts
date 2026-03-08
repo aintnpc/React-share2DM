@@ -61,6 +61,7 @@ export interface Brand {
   brand_name: string;
   ig_account_id: string;
   ig_access_token: string;
+  ig_username: string | null;
   token_expires_at: number | null;
   plan: PlanName;
   created_at: string;

@@ -1,0 +1,67 @@
+# share2dm — 프로젝트 현황 & 할 일
+
+## 서비스 개요
+Instagram DM 자동화 플랫폼.
+브랜드가 캠페인을 만들면, 유저가 특정 릴스를 공유하거나 게시물에 댓글을 달 때
+자동으로 DM (+ 댓글 답글)을 보내고 링크 클릭을 추적함.
+
+---
+
+## 현재 구현된 기능
+
+### 백엔드 (Cloudflare Workers)
+- [x] Instagram OAuth 연동 (Meta Graph API)
+- [x] 릴스 공유 → DM 자동 발송 (webhook 수신 → 큐잉 → cron 발송)
+- [x] 분당 200 DM 레이트 리밋 + 재시도 큐 시스템
+- [x] 링크 클릭 추적 (/t/{campaign_id}/{ig_id})
+- [x] Toss Payments 정기결제 (빌링키 발급 + 매일 자동청구 cron)
+- [x] Clozet 셀러 연동 (OAuth + 콘텐츠 조회)
+- [x] 댓글 자동화 웹훅 핸들러 (handleCommentEvent) — 코드 완성, DB 마이그레이션 대기
+
+### 프론트엔드 (React)
+- [x] 대시보드: 캠페인 생성/토글/삭제, 통계 (공유수/DM발송/링크클릭)
+- [x] 대시보드: 댓글 자동화 캠페인 탭 + 폼 + 카드 UI — 코드 완성, DB 마이그레이션 대기
+- [x] 요금제 페이지 (Pricing)
+- [x] Admin 모니터링 페이지
+
+---
+
+## 지금 당장 해야 할 작업 (블로킹)
+
+### 2. Workers 재배포
+  cd workers && npx wrangler deploy
+댓글 웹훅 핸들러 코드가 반영되려면 재배포 필요.
+
+### 3. Meta App에 comments 웹훅 필드 추가
+  Meta for Developers → 앱 → Webhooks → Instagram → comments 필드 구독
+현재 코드는 comments 이벤트를 처리할 수 있지만,
+Meta 앱 설정에서 comments 필드를 구독하지 않으면 웹훅이 안 들어옴.
+
+---
+
+## 중기 작업 (댓글 자동화 정식 런칭 전)
+
+### 4. Meta App Review — instagram_manage_comments 권한 신청
+댓글 공개 답글 기능 (/{comment_id}/replies API)은
+이 권한 없이는 403 에러 남.
+→ 권한 없어도 DM 발송은 정상 동작 (graceful fallback 처리됨)
+→ App Review 통과 후 댓글 답글 기능 완전 활성화
+
+신청 방법: Meta for Developers → 앱 → App Review → 권한 요청
+필요한 권한: instagram_manage_comments
+
+### 5. 기존 브랜드 계정 웹훅 재구독
+auth.ts에서 subscribed_fields에 'comments'를 추가했지만
+기존에 이미 연결된 계정들은 재로그인하기 전까지는 comments 웹훅을 받지 못함.
+→ 방법 1: 유저에게 재로그인 안내
+→ 방법 2: Admin에서 일괄 재구독 스크립트 실행
+
+---
+
+## 향후 추가 가능한 기능
+
+- [ ] Story Reply Trigger (스토리 답장 → DM) — 추가 권한 없이 가능
+- [ ] Keyword DM Trigger (키워드 DM → 자동 응답) — 추가 권한 없이 가능
+- [ ] Story Mention Trigger (스토리 태그 → DM) — instagram_manage_mentions 권한 필요
+- [ ] 캠페인별 A/B 테스트 (메시지 변형)
+- [ ] 웹훅 로그 뷰어 (Admin 페이지 확장)
