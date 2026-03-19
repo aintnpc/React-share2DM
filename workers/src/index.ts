@@ -48,7 +48,7 @@ async function handleDebugSubscriptions(env: Env): Promise<Response> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subscribed_fields: ['messages'],
+          subscribed_fields: ['messages', 'comments'],
           access_token: token,
         }),
       }
