@@ -71,6 +71,8 @@ export default function Dashboard() {
 
   const [notificationEmail, setNotificationEmail] = useState<string>('');
   const [emailSaving, setEmailSaving] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailModalInput, setEmailModalInput] = useState('');
 
   const [billingCardLast4, setBillingCardLast4] = useState<string | null>(null);
   const [clozetStoreName, setClozetStoreName] = useState<string | null>(null);
@@ -141,7 +143,12 @@ export default function Dashboard() {
       setBillingCardLast4(data.billing_card_last4 ?? null);
       setIgAccountId(data.ig_account_id ?? null);
       setIgUsername(data.ig_username ?? null);
-      setNotificationEmail(data.notification_email ?? '');
+      const email = data.notification_email ?? '';
+      setNotificationEmail(email);
+      if (!email) {
+        setEmailModalInput('');
+        setShowEmailModal(true);
+      }
     }
   }, [brandId]);
 
@@ -313,6 +320,18 @@ export default function Dashboard() {
     setEmailSaving(false);
   };
 
+  const handleEmailModalSave = async () => {
+    if (!emailModalInput.trim()) return;
+    setEmailSaving(true);
+    await supabase
+      .from('share2dm_brands')
+      .update({ notification_email: emailModalInput.trim() })
+      .eq('id', brandId);
+    setNotificationEmail(emailModalInput.trim());
+    setEmailSaving(false);
+    setShowEmailModal(false);
+  };
+
   const extractShortCode = (link: string): string => {
     const reelMatch = link.match(/\/reel\/([A-Za-z0-9_-]+)/);
     if (reelMatch) return reelMatch[1];
@@ -471,6 +490,52 @@ export default function Dashboard() {
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
+      {/* 이메일 미입력 블로킹 모달 */}
+      {showEmailModal && (
+        <div style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '12px', padding: '32px',
+            width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <h2 style={{ margin: '0 0 8px 0', fontSize: '20px' }}>
+              {t('알림 이메일 설정', 'Set Notification Email')}
+            </h2>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#666', lineHeight: '1.5' }}>
+              {t(
+                '토큰 만료 및 rate limit 초과 시 알림을 받을 이메일을 입력해주세요. 입력 후 사용하실 수 있습니다.',
+                'Enter an email to receive alerts for token expiry and rate limit issues. Required to proceed.'
+              )}
+            </p>
+            <input
+              type="email"
+              value={emailModalInput}
+              onChange={e => setEmailModalInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleEmailModalSave(); }}
+              placeholder={t('이메일 주소', 'Email address')}
+              style={{
+                width: '100%', padding: '10px 12px', border: '1px solid #ddd',
+                borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', marginBottom: '12px',
+              }}
+              autoFocus
+            />
+            <button
+              onClick={handleEmailModalSave}
+              disabled={emailSaving || !emailModalInput.trim()}
+              style={{
+                width: '100%', padding: '11px', backgroundColor: emailModalInput.trim() ? '#E1306C' : '#ccc',
+                color: 'white', border: 'none', borderRadius: '6px', cursor: emailModalInput.trim() ? 'pointer' : 'default',
+                fontSize: '15px', fontWeight: 'bold',
+              }}
+            >
+              {emailSaving ? t('저장 중...', 'Saving...') : t('저장하고 시작하기', 'Save & Continue')}
+            </button>
+          </div>
+        </div>
+      )}
+
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1>share2dm</h1>
         <button

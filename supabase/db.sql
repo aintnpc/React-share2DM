@@ -156,6 +156,8 @@ CREATE TABLE public.content_product_tags (
   contents_id uuid,
   image_index integer DEFAULT 0,
   show_image boolean DEFAULT true,
+  is_d2c boolean DEFAULT false,
+  external_url text,
   CONSTRAINT content_product_tags_pkey PRIMARY KEY (id),
   CONSTRAINT content_product_tags_contents_id_fkey FOREIGN KEY (contents_id) REFERENCES public.contents(id),
   CONSTRAINT reel_product_tags_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(product_id)
@@ -234,6 +236,12 @@ CREATE TABLE public.orders (
   shipping_address_id uuid,
   shipping_request text,
   payment_key text UNIQUE,
+  customer_email text,
+  guest_recipient_name text,
+  guest_address text,
+  guest_detail_address text,
+  guest_postal_code text,
+  guest_phone text,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
   CONSTRAINT orders_shipping_address_id_fkey FOREIGN KEY (shipping_address_id) REFERENCES public.user_addresses(id)
@@ -403,6 +411,7 @@ CREATE TABLE public.share2dm_brands (
   billing_card_last4 text,
   next_billing_date date,
   last_payment_key text,
+  ig_username text,
   CONSTRAINT share2dm_brands_pkey PRIMARY KEY (id),
   CONSTRAINT share2dm_brands_clozet_seller_id_fkey FOREIGN KEY (clozet_seller_id) REFERENCES public.seller_profile(id)
 );
@@ -420,9 +429,25 @@ CREATE TABLE public.share2dm_campaigns (
   clozet_content_id uuid,
   clozet_short_code text,
   product_url_source text DEFAULT 'manual'::text CHECK (product_url_source = ANY (ARRAY['manual'::text, 'clozet'::text])),
+  campaign_type text NOT NULL DEFAULT 'reel_share'::text CHECK (campaign_type = ANY (ARRAY['reel_share'::text, 'comment_automation'::text])),
+  trigger_keywords ARRAY DEFAULT '{}'::text[],
+  comment_reply_message text,
   CONSTRAINT share2dm_campaigns_pkey PRIMARY KEY (id),
   CONSTRAINT share2dm_campaigns_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id),
   CONSTRAINT share2dm_campaigns_clozet_content_id_fkey FOREIGN KEY (clozet_content_id) REFERENCES public.contents(id)
+);
+CREATE TABLE public.share2dm_comment_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  campaign_id uuid NOT NULL,
+  brand_id uuid NOT NULL,
+  commenter_ig_id text NOT NULL,
+  comment_id text NOT NULL UNIQUE,
+  comment_text text,
+  comment_replied_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT share2dm_comment_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT share2dm_comment_logs_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.share2dm_campaigns(id),
+  CONSTRAINT share2dm_comment_logs_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id)
 );
 CREATE TABLE public.share2dm_connect_tokens (
   token uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -440,12 +465,30 @@ CREATE TABLE public.share2dm_dm_logs (
   campaign_id uuid,
   brand_id uuid,
   sender_ig_id text NOT NULL,
-  reel_video_id text,
+  ig_contents_id text,
   dm_sent_at timestamp with time zone DEFAULT now(),
   link_clicked_at timestamp with time zone,
   CONSTRAINT share2dm_dm_logs_pkey PRIMARY KEY (id),
   CONSTRAINT share2dm_dm_logs_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.share2dm_campaigns(id),
   CONSTRAINT share2dm_dm_logs_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id)
+);
+CREATE TABLE public.share2dm_dm_queue (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  brand_id uuid NOT NULL,
+  campaign_id uuid NOT NULL,
+  sender_ig_id text NOT NULL,
+  ig_contents_id text NOT NULL,
+  message text NOT NULL,
+  access_token text NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'sending'::text, 'sent'::text, 'failed'::text])),
+  retry_count integer NOT NULL DEFAULT 0,
+  error_message text,
+  created_at timestamp with time zone DEFAULT now(),
+  sent_at timestamp with time zone,
+  mid text,
+  CONSTRAINT share2dm_dm_queue_pkey PRIMARY KEY (id),
+  CONSTRAINT share2dm_dm_queue_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.share2dm_campaigns(id),
+  CONSTRAINT share2dm_dm_queue_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.share2dm_brands(id)
 );
 CREATE TABLE public.share2dm_payments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
