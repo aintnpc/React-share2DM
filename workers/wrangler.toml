@@ -17,4 +17,7 @@ META_APP_SECRET = "b187c2e7f226baa8c8a3ee00e598bd27"
 CLOZET_BO_URL = "https://clozet.my"
 
 [triggers]
-crons = ["*/1 * * * *", "0 0 * * *"]  # 매분: DM 큐 처리, 매일 00:00 UTC: 빌링
+crons = ["*/1 * * * *", "0 0 * * *"]  # 매분: DM 큐 처리, 매일 00:00 UTC: 빌링 + 토큰 만료 체크 + 큐 정리
+
+# Secrets (set via: wrangler secret put RESEND_API_KEY)
+# RESEND_API_KEY

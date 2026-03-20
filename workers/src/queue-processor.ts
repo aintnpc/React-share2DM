@@ -1,5 +1,6 @@
 import { Env } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { sendRateLimitAlert } from './email';
 
 const MAX_RETRIES = 3;
 // Process up to this many per brand per cron tick
@@ -26,12 +27,13 @@ export async function handleQueueCron(env: Env): Promise<void> {
   console.log(`[Queue] Processing ${brandIds.length} brands with pending DMs`);
 
   for (const brandId of brandIds) {
-    await processBrandQueue(supabase, brandId);
+    await processBrandQueue(supabase, env, brandId);
   }
 }
 
 async function processBrandQueue(
   supabase: SupabaseClient,
+  env: Env,
   brandId: string
 ): Promise<void> {
   const batchSize = BATCH_SIZE_PER_BRAND;
@@ -106,6 +108,21 @@ async function processBrandQueue(
           .eq('id', item.id);
 
         console.warn(`[Queue] Brand ${brandId}: 429 rate limited, stopping batch`);
+        // Send 429 alert email if configured
+        if (env.RESEND_API_KEY) {
+          const { data: brand } = await supabase
+            .from('share2dm_brands')
+            .select('brand_name, notification_email')
+            .eq('id', brandId)
+            .single();
+          if (brand?.notification_email) {
+            try {
+              await sendRateLimitAlert(env.RESEND_API_KEY, brand.notification_email, brand.brand_name);
+            } catch (e: any) {
+              console.error(`[Queue] Failed to send 429 alert:`, e.message);
+            }
+          }
+        }
         return; // Stop processing this brand
       } else {
         // Other error

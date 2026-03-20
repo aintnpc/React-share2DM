@@ -69,6 +69,9 @@ export default function Dashboard() {
     comment_reply_message: '',
   });
 
+  const [notificationEmail, setNotificationEmail] = useState<string>('');
+  const [emailSaving, setEmailSaving] = useState(false);
+
   const [billingCardLast4, setBillingCardLast4] = useState<string | null>(null);
   const [clozetStoreName, setClozetStoreName] = useState<string | null>(null);
   const [clozetConnecting, setClozetConnecting] = useState(false);
@@ -129,7 +132,7 @@ export default function Dashboard() {
   const loadBrandInfo = useCallback(async () => {
     const { data } = await supabase
       .from('share2dm_brands')
-      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4, ig_account_id, ig_username')
+      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4, ig_account_id, ig_username, notification_email')
       .eq('id', brandId)
       .single();
     if (data) {
@@ -138,6 +141,7 @@ export default function Dashboard() {
       setBillingCardLast4(data.billing_card_last4 ?? null);
       setIgAccountId(data.ig_account_id ?? null);
       setIgUsername(data.ig_username ?? null);
+      setNotificationEmail(data.notification_email ?? '');
     }
   }, [brandId]);
 
@@ -298,6 +302,15 @@ export default function Dashboard() {
       .update({ clozet_seller_id: null, clozet_store_name: null, clozet_connected_at: null })
       .eq('id', brandId);
     setClozetStoreName(null);
+  };
+
+  const handleEmailSave = async () => {
+    setEmailSaving(true);
+    await supabase
+      .from('share2dm_brands')
+      .update({ notification_email: notificationEmail || null })
+      .eq('id', brandId);
+    setEmailSaving(false);
   };
 
   const extractShortCode = (link: string): string => {
@@ -526,6 +539,29 @@ export default function Dashboard() {
                 {clozetConnecting ? t('연결 중...', 'Connecting...') : t('Clozet 연결하기', 'Connect Clozet')}
               </button>
             )}
+          </div>
+        </div>
+
+        {/* 알림 이메일 */}
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
+          <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#888', fontWeight: '600' }}>
+            {t('알림 이메일', 'Notification Email')}
+          </p>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type="email"
+              value={notificationEmail}
+              onChange={e => setNotificationEmail(e.target.value)}
+              placeholder={t('토큰 만료 / 429 알림 수신 이메일', 'Email for token expiry & rate limit alerts')}
+              style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }}
+            />
+            <button
+              onClick={handleEmailSave}
+              disabled={emailSaving}
+              style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
+            >
+              {emailSaving ? t('저장 중...', 'Saving...') : t('저장', 'Save')}
+            </button>
           </div>
         </div>
       </div>

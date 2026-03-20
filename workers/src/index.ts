@@ -6,6 +6,7 @@ import { handleClozetCallback, handleClozetContentLookup } from './clozet';
 import { handleIssueBillingKey, handleBillingCron } from './billing';
 import { handleQueueCron, handleQueueStatus, handleAdminStats } from './queue-processor';
 import { createClient } from '@supabase/supabase-js';
+import { sendTokenExpiryWarning } from './email';
 
 async function handleDebugSubscriptions(env: Env): Promise<Response> {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
@@ -313,6 +314,27 @@ export default {
         .in('status', ['sent', 'failed'])
         .lt('created_at', sevenDaysAgo);
       console.log(`[Cron] Queue cleanup: deleted ${count} old sent/failed items`);
+
+      // Token expiry D-7 warning
+      if (env.RESEND_API_KEY) {
+        const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const oneDayLater = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: expiringBrands } = await supabase
+          .from('share2dm_brands')
+          .select('brand_name, notification_email, token_expires_at')
+          .not('notification_email', 'is', null)
+          .lte('token_expires_at', sevenDaysLater)
+          .gte('token_expires_at', oneDayLater);
+        for (const brand of expiringBrands ?? []) {
+          const daysLeft = Math.ceil((new Date(brand.token_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          try {
+            await sendTokenExpiryWarning(env.RESEND_API_KEY, brand.notification_email, brand.brand_name, daysLeft);
+            console.log(`[Cron] Token expiry warning sent to ${brand.notification_email} (${daysLeft} days left)`);
+          } catch (e: any) {
+            console.error(`[Cron] Failed to send expiry warning:`, e.message);
+          }
+        }
+      }
     }
   },
 };
