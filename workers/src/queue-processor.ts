@@ -1,10 +1,10 @@
 import { Env } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const RATE_LIMIT_PER_HOUR = 200;
 const MAX_RETRIES = 3;
-// Process up to this many per brand per cron tick (≈3.3/min to stay under 200/hr)
-const BATCH_SIZE_PER_BRAND = 3;
+// Process up to this many per brand per cron tick
+// Meta's actual rate limit is discovered via 429 responses — no self-imposed cap
+const BATCH_SIZE_PER_BRAND = 20;
 
 export async function handleQueueCron(env: Env): Promise<void> {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
@@ -34,25 +34,7 @@ async function processBrandQueue(
   supabase: SupabaseClient,
   brandId: string
 ): Promise<void> {
-  // Check how many DMs were sent in the last hour for this brand
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-
-  const { count: recentSentCount } = await supabase
-    .from('share2dm_dm_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('brand_id', brandId)
-    .gte('dm_sent_at', oneHourAgo);
-
-  const sentInLastHour = recentSentCount ?? 0;
-  const remainingQuota = Math.max(0, RATE_LIMIT_PER_HOUR - sentInLastHour);
-
-  if (remainingQuota === 0) {
-    console.log(`[Queue] Brand ${brandId}: rate limit reached (${sentInLastHour}/${RATE_LIMIT_PER_HOUR}/hr), skipping`);
-    return;
-  }
-
-  // Take the smaller of batch size and remaining quota
-  const batchSize = Math.min(BATCH_SIZE_PER_BRAND, remainingQuota);
+  const batchSize = BATCH_SIZE_PER_BRAND;
 
   // Fetch pending items (FIFO)
   const { data: items } = await supabase
@@ -65,14 +47,23 @@ async function processBrandQueue(
 
   if (!items?.length) return;
 
-  console.log(`[Queue] Brand ${brandId}: processing ${items.length} items (${sentInLastHour}/${RATE_LIMIT_PER_HOUR} sent in last hr)`);
+  console.log(`[Queue] Brand ${brandId}: processing ${items.length} items`);
 
   for (const item of items) {
-    // Mark as sending
-    await supabase
+    // Atomically claim the item: only proceed if it's still 'pending'
+    // (webhook may have already claimed and sent it between our SELECT and this UPDATE)
+    const { data: claimed } = await supabase
       .from('share2dm_dm_queue')
       .update({ status: 'sending' })
-      .eq('id', item.id);
+      .eq('id', item.id)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle();
+
+    if (!claimed) {
+      console.log(`[Queue] Item ${item.id} already claimed/sent, skipping`);
+      continue;
+    }
 
     try {
       // Send DM via Instagram Graph API
