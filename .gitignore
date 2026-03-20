@@ -12,3 +12,6 @@ web/.env.production.local
 # workers
 workers/.env
 workers/.dev.vars
+
+# etc (로컬 자료)
+etc/
