@@ -280,6 +280,7 @@ export default {
         return handleDebugSubscriptions(env);
       }
 
+
       // Health check
       if (url.pathname === '/' || url.pathname === '/health') {
         return new Response(JSON.stringify({ status: 'ok', service: 'share2dm' }), {
