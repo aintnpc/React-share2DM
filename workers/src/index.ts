@@ -299,10 +299,20 @@ export default {
       console.log('[Cron] Queue processor triggered');
       await handleQueueCron(env);
     }
-    // Daily at midnight UTC: billing
+    // Daily at midnight UTC: billing + queue cleanup
     if (event.cron === '0 0 * * *') {
       console.log('[Cron] Billing cron triggered');
       await handleBillingCron(env);
+
+      // Delete sent/failed queue items older than 7 days
+      const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from('share2dm_dm_queue')
+        .delete({ count: 'exact' })
+        .in('status', ['sent', 'failed'])
+        .lt('created_at', sevenDaysAgo);
+      console.log(`[Cron] Queue cleanup: deleted ${count} old sent/failed items`);
     }
   },
 };
