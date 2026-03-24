@@ -115,16 +115,11 @@ const ClozetConnect = () => {
           {/* Phone frame */}
           <div className="relative mx-auto md:mx-0 shrink-0">
             <div className="w-[280px] h-[560px] rounded-[3rem] border-[3px] border-white/10 bg-gradient-to-b from-[#1a1630] to-[#0d0a1a] overflow-hidden relative shadow-2xl shadow-purple-500/10">
-              <video
+              <img
+                src="/clozet_connect_demo.gif"
+                alt="Clozet Connect demo"
                 className="absolute inset-0 w-full h-full object-cover"
-                autoPlay
-                loop
-                muted
-                playsInline
-              >
-                <source src="/clozet%20connect%20mobile%20demo.MOV" type="video/quicktime" />
-                <source src="/clozet%20connect%20mobile%20demo.MOV" type="video/mp4" />
-              </video>
+              />
             </div>
           </div>
 
