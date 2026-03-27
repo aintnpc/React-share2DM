@@ -6,6 +6,8 @@ export interface Env {
   META_VERIFY_TOKEN: string;
   TOSS_SECRET_KEY: string;
   RESEND_API_KEY: string;
+  CAFE24_CLIENT_ID: string;
+  CAFE24_CLIENT_SECRET: string;
 }
 
 // Instagram Webhook payload types

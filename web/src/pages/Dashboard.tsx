@@ -39,6 +39,14 @@ interface ClozetContent {
   clozet_url?: string;
 }
 
+interface Cafe24Product {
+  cafe24_product_no: number;
+  product_name: string;
+  price: number;
+  image_url: string | null;
+  product_url: string;
+}
+
 interface MediaItem {
   id: string;
   shortcode: string;
@@ -80,9 +88,28 @@ export default function Dashboard() {
   const [clozetContent, setClozetContent] = useState<ClozetContent | null>(null);
   const [clozetLookingUp, setClozetLookingUp] = useState(false);
 
+  const [cafe24MallId, setCafe24MallId] = useState<string | null>(null);
+  const [cafe24MallInput, setCafe24MallInput] = useState('');
+  const [cafe24Connecting, setCafe24Connecting] = useState(false);
+  const [cafe24Syncing, setCafe24Syncing] = useState(false);
+  const [cafe24Products, setCafe24Products] = useState<Cafe24Product[]>([]);
+  const [showCafe24ProductPicker, setShowCafe24ProductPicker] = useState(false);
+  const [selectedCafe24Product, setSelectedCafe24Product] = useState<Cafe24Product | null>(null);
+
   // Clozet 콜백 처리
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('cafe24_connected') === 'true') {
+      const mallId = params.get('cafe24_mall');
+      if (mallId) setCafe24MallId(decodeURIComponent(mallId));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    const cafe24Error = params.get('cafe24_error');
+    if (cafe24Error) {
+      alert(`${lang === 'ko' ? 'Cafe24 연결 실패' : 'Cafe24 connection failed'}: ${cafe24Error}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     if (params.get('clozet_connected') === 'true') {
       const storeName = params.get('clozet_store');
       const state = params.get('state') ?? '';
@@ -134,12 +161,13 @@ export default function Dashboard() {
   const loadBrandInfo = useCallback(async () => {
     const { data } = await supabase
       .from('share2dm_brands')
-      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4, ig_account_id, ig_username, notification_email')
+      .select('plan, clozet_store_name, clozet_connected_at, billing_card_last4, ig_account_id, ig_username, notification_email, cafe24_mall_id')
       .eq('id', brandId)
       .single();
     if (data) {
       setBrandPlan(data.plan as PlanName);
       setClozetStoreName(data.clozet_store_name ?? null);
+      setCafe24MallId(data.cafe24_mall_id ?? null);
       setBillingCardLast4(data.billing_card_last4 ?? null);
       setIgAccountId(data.ig_account_id ?? null);
       setIgUsername(data.ig_username ?? null);
@@ -157,6 +185,7 @@ export default function Dashboard() {
       .from('share2dm_campaigns')
       .select('*')
       .eq('brand_id', brandId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     if (data) {
       setCampaigns(data);
@@ -255,6 +284,10 @@ export default function Dashboard() {
   }, [brandId, loadBrandInfo]);
 
   useEffect(() => {
+    if (cafe24MallId && brandId) loadCafe24Products();
+  }, [cafe24MallId, brandId]);
+
+  useEffect(() => {
     if (!brandId) return;
     loadCampaigns();
     loadDmUsage();
@@ -311,6 +344,53 @@ export default function Dashboard() {
     setClozetStoreName(null);
   };
 
+  const handleCafe24Connect = () => {
+    if (!brandId || !cafe24MallInput.trim()) return;
+    setCafe24Connecting(true);
+    const mallId = cafe24MallInput.trim().toLowerCase().replace(/\.cafe24\.com$/, '');
+    window.location.href = `${WORKERS_URL}/auth/cafe24?brand_id=${brandId}&mall_id=${encodeURIComponent(mallId)}`;
+  };
+
+  const handleCafe24Disconnect = async () => {
+    if (!window.confirm(lang === 'ko' ? 'Cafe24 연결을 해제하시겠습니까?' : 'Disconnect Cafe24?')) return;
+    await supabase
+      .from('share2dm_brands')
+      .update({ cafe24_mall_id: null, cafe24_access_token: null, cafe24_refresh_token: null, cafe24_connected_at: null })
+      .eq('id', brandId);
+    setCafe24MallId(null);
+    setCafe24Products([]);
+  };
+
+  const handleCafe24Sync = async () => {
+    if (!brandId) return;
+    setCafe24Syncing(true);
+    try {
+      const res = await fetch(`${WORKERS_URL}/cafe24/products/sync?brand_id=${brandId}`, { method: 'POST' });
+      const data = await res.json() as { synced?: number; error?: string };
+      if (data.synced !== undefined) {
+        await loadCafe24Products();
+        alert(lang === 'ko' ? `${data.synced}개 상품이 동기화됐습니다.` : `${data.synced} products synced.`);
+      } else {
+        alert(lang === 'ko' ? `동기화 실패: ${data.error}` : `Sync failed: ${data.error}`);
+      }
+    } catch {
+      alert(lang === 'ko' ? '동기화 중 오류가 발생했습니다.' : 'An error occurred during sync.');
+    } finally {
+      setCafe24Syncing(false);
+    }
+  };
+
+  const loadCafe24Products = async () => {
+    if (!brandId) return;
+    try {
+      const res = await fetch(`${WORKERS_URL}/cafe24/products/list?brand_id=${brandId}`);
+      const data = await res.json() as { products?: Cafe24Product[] };
+      if (data.products) setCafe24Products(data.products);
+    } catch {
+      // ignore
+    }
+  };
+
   const handleEmailSave = async () => {
     setEmailSaving(true);
     await supabase
@@ -350,12 +430,14 @@ export default function Dashboard() {
 
     // Fetch media ID to verify the reel exists on this IG account
     setReelLookup({ loading: true, mediaId: null, error: null });
+    let fetchedMediaId: string | null = null;
     try {
       const res = await fetch(
         `${WORKERS_URL}/media-id?brand_id=${brandId}&url=${encodeURIComponent(reelUrl)}`
       );
       const data = await res.json() as { media_id?: string; error?: string };
       if (data.media_id) {
+        fetchedMediaId = data.media_id;
         setReelLookup({ loading: false, mediaId: data.media_id, error: null });
       } else {
         setReelLookup({ loading: false, mediaId: null, error: data.error ?? 'Reel not found' });
@@ -367,8 +449,9 @@ export default function Dashboard() {
     if (!clozetStoreName) return;
     setClozetLookingUp(true);
     try {
+      const mediaIdParam = fetchedMediaId ? `&media_id=${fetchedMediaId}` : '';
       const res = await fetch(
-        `${WORKERS_URL}/clozet/contents?brand_id=${brandId}&ig_code=${shortCode}`
+        `${WORKERS_URL}/clozet/contents?brand_id=${brandId}&ig_code=${shortCode}${mediaIdParam}`
       );
       const data: ClozetContent = await res.json();
       setClozetContent(data);
@@ -385,6 +468,8 @@ export default function Dashboard() {
   const resetForm = () => {
     setForm({ reel_url: '', response_message: '', product_url: '', trigger_keywords: '', comment_reply_message: '' });
     setClozetContent(null);
+    setSelectedCafe24Product(null);
+    setShowCafe24ProductPicker(false);
     setShowForm(false);
   };
 
@@ -445,6 +530,7 @@ export default function Dashboard() {
       }
     } else {
       const isFromClozet = clozetContent?.found && form.product_url === clozetContent.clozet_url;
+      const isFromCafe24 = selectedCafe24Product !== null && form.product_url === selectedCafe24Product.product_url;
       const { error } = await supabase.from('share2dm_campaigns').insert({
         brand_id: brandId,
         campaign_type: 'reel_share',
@@ -453,9 +539,10 @@ export default function Dashboard() {
         short_code: shortCode,
         response_message: form.response_message,
         product_url: form.product_url,
-        product_url_source: isFromClozet ? 'clozet' : 'manual',
+        product_url_source: isFromClozet ? 'clozet' : isFromCafe24 ? 'cafe24' : 'manual',
         clozet_content_id: isFromClozet ? (clozetContent?.content_id ?? null) : null,
         clozet_short_code: isFromClozet ? (clozetContent?.short_code ?? null) : null,
+        cafe24_product_no: isFromCafe24 ? selectedCafe24Product.cafe24_product_no : null,
       });
       if (error) {
         console.error('[Campaign] insert error:', error);
@@ -477,10 +564,11 @@ export default function Dashboard() {
   };
 
   const deleteCampaign = async (id: string) => {
-    if (!window.confirm(lang === 'ko' ? '캠페인을 삭제하시겠습니까? DM 발송 기록도 함께 삭제됩니다.' : 'Delete this campaign? DM send history will also be deleted.')) return;
-    await supabase.from('share2dm_comment_logs').delete().eq('campaign_id', id);
-    await supabase.from('share2dm_dm_logs').delete().eq('campaign_id', id);
-    const { error } = await supabase.from('share2dm_campaigns').delete().eq('id', id);
+    if (!window.confirm(lang === 'ko' ? '캠페인을 삭제하시겠습니까?' : 'Delete this campaign?')) return;
+    const { error } = await supabase
+      .from('share2dm_campaigns')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
     if (error) {
       alert((lang === 'ko' ? '캠페인 삭제 중 오류가 발생했습니다: ' : 'Error deleting campaign: ') + error.message);
       return;
@@ -603,6 +691,54 @@ export default function Dashboard() {
               >
                 {clozetConnecting ? t('연결 중...', 'Connecting...') : t('Clozet 연결하기', 'Connect Clozet')}
               </button>
+            )}
+
+            {/* Cafe24 연결 */}
+            {cafe24MallId ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: '#444' }}>
+                  Cafe24 — <strong>{cafe24MallId}.cafe24.com</strong>
+                </span>
+                <button
+                  onClick={handleCafe24Sync}
+                  disabled={cafe24Syncing}
+                  style={{ fontSize: '11px', color: '#0EA5E9', background: 'none', border: '1px solid #0EA5E9', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer' }}
+                >
+                  {cafe24Syncing ? t('동기화 중...', 'Syncing...') : t('상품 동기화', 'Sync Products')}
+                </button>
+                <button
+                  onClick={handleCafe24Disconnect}
+                  style={{ fontSize: '11px', color: '#999', background: 'none', border: '1px solid #ddd', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer' }}
+                >
+                  {t('연결 해제', 'Disconnect')}
+                </button>
+                {cafe24Products.length > 0 && (
+                  <span style={{ fontSize: '12px', color: '#888' }}>
+                    {t(`상품 ${cafe24Products.length}개`, `${cafe24Products.length} products`)}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <input
+                  placeholder={t('쇼핑몰 ID (예: myshop)', 'Mall ID (e.g. myshop)')}
+                  value={cafe24MallInput}
+                  onChange={e => setCafe24MallInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCafe24Connect(); }}
+                  style={{ padding: '5px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '12px', width: '160px' }}
+                />
+                <button
+                  onClick={handleCafe24Connect}
+                  disabled={cafe24Connecting || !cafe24MallInput.trim()}
+                  style={{
+                    fontSize: '12px', padding: '5px 12px',
+                    backgroundColor: cafe24Connecting || !cafe24MallInput.trim() ? '#ccc' : '#0066FF',
+                    color: 'white', border: 'none', borderRadius: '6px', cursor: cafe24MallInput.trim() ? 'pointer' : 'default',
+                  }}
+                >
+                  {cafe24Connecting ? t('연결 중...', 'Connecting...') : t('Cafe24 연결', 'Connect Cafe24')}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -806,19 +942,88 @@ export default function Dashboard() {
 
             {/* 공통: 제품 URL */}
             <div>
-              <input
-                placeholder={t('제품 URL (https://your-store.com/product)', 'Product URL (https://your-store.com/product)')}
-                value={form.product_url}
-                onChange={(e) => setForm({ ...form, product_url: e.target.value })}
-                style={{
-                  ...inputStyle,
-                  backgroundColor: clozetContent?.found ? '#f0fdf4' : 'white',
-                  color: clozetContent?.found ? '#15803d' : '#333',
-                }}
-                readOnly={campaignType === 'reel_share' && clozetContent?.found === true}
-              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  placeholder={t('제품 URL (https://your-store.com/product)', 'Product URL (https://your-store.com/product)')}
+                  value={form.product_url}
+                  onChange={(e) => {
+                    setForm({ ...form, product_url: e.target.value });
+                    if (selectedCafe24Product) setSelectedCafe24Product(null);
+                  }}
+                  style={{
+                    ...inputStyle,
+                    flex: 1,
+                    backgroundColor: clozetContent?.found ? '#f0fdf4' : selectedCafe24Product ? '#eff6ff' : 'white',
+                    color: clozetContent?.found ? '#15803d' : selectedCafe24Product ? '#1d4ed8' : '#333',
+                  }}
+                  readOnly={campaignType === 'reel_share' && (clozetContent?.found === true || selectedCafe24Product !== null)}
+                />
+                {cafe24MallId && cafe24Products.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCafe24ProductPicker(p => !p)}
+                    style={{
+                      padding: '0 12px', border: '1px solid #0066FF', borderRadius: '6px',
+                      fontSize: '12px', cursor: 'pointer', backgroundColor: '#eff6ff',
+                      color: '#0066FF', whiteSpace: 'nowrap', flexShrink: 0,
+                    }}
+                  >
+                    Cafe24 {t('상품 선택', 'Pick Product')}
+                  </button>
+                )}
+              </div>
+
+              {/* Cafe24 상품 피커 */}
+              {showCafe24ProductPicker && (
+                <div style={{ marginTop: '8px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: '#f0f7ff', borderBottom: '1px solid #dce7ff' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#0066FF' }}>Cafe24 {t('상품', 'Products')}</span>
+                    <button type="button" onClick={() => setShowCafe24ProductPicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#888' }}>✕</button>
+                  </div>
+                  <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                    {cafe24Products.map(p => (
+                      <button
+                        key={p.cafe24_product_no}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCafe24Product(p);
+                          setForm(prev => ({ ...prev, product_url: p.product_url }));
+                          setShowCafe24ProductPicker(false);
+                        }}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                          padding: '10px 12px', border: 'none', borderBottom: '1px solid #f0f0f0',
+                          background: selectedCafe24Product?.cafe24_product_no === p.cafe24_product_no ? '#eff6ff' : 'white',
+                          cursor: 'pointer', textAlign: 'left',
+                        }}
+                      >
+                        {p.image_url && (
+                          <img src={p.image_url} alt={p.product_name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: '13px', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.product_name}</p>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#666' }}>₩{p.price.toLocaleString()}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {campaignType === 'reel_share' && clozetContent?.found && (
                 <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#16a34a' }}>{t('Clozet 릴스 페이지로 자동 설정됨', 'Auto-set to Clozet reel page')}</p>
+              )}
+              {selectedCafe24Product && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#1d4ed8' }}>
+                  {t('Cafe24 상품 선택됨: ', 'Cafe24 product selected: ')}<strong>{selectedCafe24Product.product_name}</strong>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedCafe24Product(null); setForm(prev => ({ ...prev, product_url: '' })); }}
+                    style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '11px', marginLeft: '6px' }}
+                  >
+                    {t('취소', 'Clear')}
+                  </button>
+                </p>
               )}
             </div>
 
@@ -867,6 +1072,11 @@ export default function Dashboard() {
                       {c.product_url_source === 'clozet' && (
                         <span style={{ fontSize: '11px', padding: '2px 6px', backgroundColor: '#1a1a2e', color: 'white', borderRadius: '4px' }}>
                           Clozet
+                        </span>
+                      )}
+                      {c.product_url_source === 'cafe24' && (
+                        <span style={{ fontSize: '11px', padding: '2px 6px', backgroundColor: '#0066FF', color: 'white', borderRadius: '4px' }}>
+                          Cafe24
                         </span>
                       )}
                     </div>

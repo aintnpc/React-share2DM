@@ -3,6 +3,7 @@ import { handleWebhookVerification, handleWebhookEvent } from './webhook';
 import { handleTracking } from './tracking';
 import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
 import { handleClozetCallback, handleClozetContentLookup } from './clozet';
+import { handleCafe24Auth, handleCafe24Callback, handleCafe24ProductsSync, handleCafe24ProductsList } from './cafe24';
 import { handleIssueBillingKey, handleBillingCron } from './billing';
 import { handleQueueCron, handleQueueStatus, handleAdminStats } from './queue-processor';
 import { createClient } from '@supabase/supabase-js';
@@ -250,9 +251,29 @@ export default {
         return handleMediaList(url, env);
       }
 
+      // Cafe24 OAuth 시작 (GET /auth/cafe24?brand_id=...&mall_id=...)
+      if (url.pathname === '/auth/cafe24' && request.method === 'GET') {
+        return handleCafe24Auth(url, env);
+      }
+
+      // Cafe24 OAuth 콜백 (GET /auth/cafe24/callback?code=...&state=...)
+      if (url.pathname === '/auth/cafe24/callback' && request.method === 'GET') {
+        return handleCafe24Callback(request, env);
+      }
+
+      // Cafe24 상품 sync (POST /cafe24/products/sync?brand_id=...)
+      if (url.pathname === '/cafe24/products/sync' && request.method === 'POST') {
+        return handleCafe24ProductsSync(url, env);
+      }
+
+      // Cafe24 상품 목록 조회 (GET /cafe24/products/list?brand_id=...)
+      if (url.pathname === '/cafe24/products/list' && request.method === 'GET') {
+        return handleCafe24ProductsList(url, env);
+      }
+
       // Clozet B.O에서 연결 완료 후 리다이렉트 (GET /auth/clozet/callback?token=...&brand_id=...&state=...&origin=...)
       if (url.pathname === '/auth/clozet/callback' && request.method === 'GET') {
-        return handleClozetCallback(request, env);
+        return handleClozetCallback(request, env, ctx);
       }
 
       // 캠페인 생성 시 Clozet 콘텐츠 조회 (GET /clozet/contents?brand_id=...&ig_code=...)
