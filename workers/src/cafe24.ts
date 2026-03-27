@@ -7,7 +7,7 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const CAFE24_SCOPES = 'mall.read_product';
+const CAFE24_SCOPES = 'mall.read_product mall.read_store';
 const FRONTEND_ORIGIN = 'https://share2dm.xyz';
 
 function buildAuthUrl(mallId: string, clientId: string, redirectUri: string, state: string): string {
@@ -23,7 +23,7 @@ function buildAuthUrl(mallId: string, clientId: string, redirectUri: string, sta
 
 /**
  * GET /auth/cafe24?brand_id=...&mall_id=...
- * Cafe24 OAuth 시작 → Cafe24 인증 페이지로 리다이렉트
+ * Cafe24 OAuth 시작
  */
 export async function handleCafe24Auth(url: URL, env: Env): Promise<Response> {
   const brandId = url.searchParams.get('brand_id');
@@ -43,14 +43,17 @@ export async function handleCafe24Auth(url: URL, env: Env): Promise<Response> {
   }));
 
   const redirectUri = `${url.origin}/auth/cafe24/callback`;
-  const authUrl = buildAuthUrl(mallId, env.CAFE24_CLIENT_ID, redirectUri, state);
-
-  return Response.redirect(authUrl, 302);
+  return Response.redirect(buildAuthUrl(mallId, env.CAFE24_CLIENT_ID, redirectUri, state), 302);
 }
 
 /**
  * GET /auth/cafe24/callback?code=...&state=...
- * Cafe24 OAuth 콜백 → code → access_token 교환 → DB 저장
+ *
+ * 1. code → access_token 교환
+ * 2. Cafe24 store 정보 조회
+ * 3. Supabase auth user 자동 생성 (없으면)
+ * 4. Clozet seller_profile 자동 생성 (status: active)
+ * 5. share2dm_brands에 cafe24 + clozet_seller_id 업데이트
  */
 export async function handleCafe24Callback(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -72,7 +75,9 @@ export async function handleCafe24Callback(request: Request, env: Env): Promise<
     return Response.redirect(`${dashboardUrl}?cafe24_error=invalid_state`, 302);
   }
 
-  // Authorization Code → Access Token 교환
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+
+  // 1. Authorization Code → Access Token
   const redirectUri = `${url.origin}/auth/cafe24/callback`;
   const tokenRes = await fetch(`https://${mallId}.cafe24api.com/api/v2/oauth/token`, {
     method: 'POST',
@@ -88,8 +93,7 @@ export async function handleCafe24Callback(request: Request, env: Env): Promise<
   });
 
   if (!tokenRes.ok) {
-    const errText = await tokenRes.text();
-    console.error('[Cafe24 CB] token exchange failed:', errText);
+    console.error('[Cafe24 CB] token exchange failed:', await tokenRes.text());
     return Response.redirect(`${dashboardUrl}?cafe24_error=token_failed`, 302);
   }
 
@@ -99,7 +103,99 @@ export async function handleCafe24Callback(request: Request, env: Env): Promise<
     expires_at?: number;
   };
 
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+  // 2. Cafe24 store 정보 조회 (mall.read_store 스코프)
+  let shopName = mallId;
+  let ownerName = mallId;
+  let contactPhone = '';
+  let businessNumber = '';
+
+  try {
+    const storeRes = await fetch(
+      `https://${mallId}.cafe24api.com/api/v2/admin/store`,
+      { headers: { Authorization: `Bearer ${tokenData.access_token}`, 'Content-Type': 'application/json' } }
+    );
+    if (storeRes.ok) {
+      const storeData = await storeRes.json() as { store?: any };
+      const store = storeData.store;
+      if (store) {
+        shopName = store.shop_name || mallId;
+        ownerName = store.ceo_name || mallId;
+        contactPhone = store.phone || '';
+        businessNumber = store.business_registration_number || '';
+      }
+    }
+  } catch (e) {
+    console.warn('[Cafe24 CB] store info fetch failed, using defaults');
+  }
+
+  // 3. brand 정보 조회 (notification_email 가져오기)
+  const { data: brand } = await supabase
+    .from('share2dm_brands')
+    .select('notification_email, clozet_seller_id')
+    .eq('id', brandId)
+    .single();
+
+  const contactEmail = brand?.notification_email || `${mallId}@cafe24.clozet.my`;
+
+  // 4. Clozet seller_profile이 이미 있으면 재사용
+  let sellerProfileId: string | null = brand?.clozet_seller_id ?? null;
+
+  if (!sellerProfileId) {
+    // 4a. Supabase auth user 자동 생성
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: contactEmail,
+      email_confirm: true,
+      user_metadata: { source: 'cafe24', mall_id: mallId },
+    });
+
+    let authUserId: string | null = null;
+
+    if (authError) {
+      // 이미 존재하는 이메일이면 기존 user 조회
+      if (authError.message?.includes('already been registered') || authError.message?.includes('already registered')) {
+        const { data: existingUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+        const existing = existingUsers?.users?.find(u => u.email === contactEmail);
+        authUserId = existing?.id ?? null;
+        console.log('[Cafe24 CB] existing auth user found:', authUserId);
+      } else {
+        console.error('[Cafe24 CB] auth user creation failed:', authError.message);
+        return Response.redirect(`${dashboardUrl}?cafe24_error=auth_failed`, 302);
+      }
+    } else {
+      authUserId = authData.user?.id ?? null;
+      console.log('[Cafe24 CB] auth user created:', authUserId);
+    }
+
+    if (!authUserId) {
+      return Response.redirect(`${dashboardUrl}?cafe24_error=auth_user_missing`, 302);
+    }
+
+    // 4b. Clozet seller_profile 자동 생성 (status: active)
+    const { data: newProfile, error: profileError } = await supabase
+      .from('seller_profile')
+      .upsert({
+        user_id: authUserId,
+        store_name: shopName,
+        owner_name: ownerName,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+        business_number: businessNumber || `CAFE24-${mallId}`,
+        status: 'active',
+        bio: `Cafe24 연동 (${mallId}.cafe24.com)`,
+      }, { onConflict: 'user_id' })
+      .select('id')
+      .single();
+
+    if (profileError || !newProfile) {
+      console.error('[Cafe24 CB] seller_profile creation failed:', profileError?.message);
+      return Response.redirect(`${dashboardUrl}?cafe24_error=profile_failed`, 302);
+    }
+
+    sellerProfileId = newProfile.id;
+    console.log('[Cafe24 CB] seller_profile created:', sellerProfileId);
+  }
+
+  // 5. share2dm_brands 업데이트 (cafe24 토큰 + clozet_seller_id)
   const { error: updateErr } = await supabase
     .from('share2dm_brands')
     .update({
@@ -110,15 +206,18 @@ export async function handleCafe24Callback(request: Request, env: Env): Promise<
         ? new Date(tokenData.expires_at * 1000).toISOString()
         : null,
       cafe24_connected_at: new Date().toISOString(),
+      clozet_seller_id: sellerProfileId,
+      clozet_store_name: shopName,
+      clozet_connected_at: new Date().toISOString(),
     })
     .eq('id', brandId);
 
   if (updateErr) {
-    console.error('[Cafe24 CB] DB update error:', updateErr.message);
+    console.error('[Cafe24 CB] brands update error:', updateErr.message);
     return Response.redirect(`${dashboardUrl}?cafe24_error=db_failed`, 302);
   }
 
-  console.log(`[Cafe24 CB] connected: brand_id=${brandId}, mall_id=${mallId}`);
+  console.log(`[Cafe24 CB] connected: brand_id=${brandId}, mall_id=${mallId}, seller_profile=${sellerProfileId}`);
   return Response.redirect(
     `${dashboardUrl}?cafe24_connected=true&cafe24_mall=${encodeURIComponent(mallId)}`,
     302
@@ -127,7 +226,9 @@ export async function handleCafe24Callback(request: Request, env: Env): Promise<
 
 /**
  * POST /cafe24/products/sync?brand_id=...
- * Cafe24 상품 목록을 share2dm_cafe24_products 테이블에 sync
+ *
+ * Cafe24 상품을 Clozet products 테이블로 sync.
+ * share2dm_cafe24_products에도 매핑 정보 저장.
  */
 export async function handleCafe24ProductsSync(url: URL, env: Env): Promise<Response> {
   const brandId = url.searchParams.get('brand_id');
@@ -142,7 +243,7 @@ export async function handleCafe24ProductsSync(url: URL, env: Env): Promise<Resp
 
   const { data: brand } = await supabase
     .from('share2dm_brands')
-    .select('cafe24_mall_id, cafe24_access_token, cafe24_refresh_token, cafe24_token_expires_at')
+    .select('cafe24_mall_id, cafe24_access_token, cafe24_refresh_token, cafe24_token_expires_at, clozet_seller_id')
     .eq('id', brandId)
     .single();
 
@@ -153,6 +254,22 @@ export async function handleCafe24ProductsSync(url: URL, env: Env): Promise<Resp
     });
   }
 
+  if (!brand.clozet_seller_id) {
+    return new Response(JSON.stringify({ error: 'clozet_not_connected' }), {
+      status: 403,
+      headers: CORS_HEADERS,
+    });
+  }
+
+  // seller_profile store_name 조회
+  const { data: sellerProfile } = await supabase
+    .from('seller_profile')
+    .select('store_name')
+    .eq('id', brand.clozet_seller_id)
+    .single();
+
+  const storeName = sellerProfile?.store_name || brand.cafe24_mall_id;
+
   const token = await getValidToken(brand, brandId, env, supabase);
   if (!token) {
     return new Response(JSON.stringify({ error: 'token_refresh_failed' }), {
@@ -161,20 +278,19 @@ export async function handleCafe24ProductsSync(url: URL, env: Env): Promise<Resp
     });
   }
 
-  // Cafe24 상품 전체 페이징 조회 (판매 중인 상품만)
+  // Cafe24 상품 전체 조회 (판매 중인 것만)
   let allProducts: any[] = [];
   let offset = 0;
   const limit = 100;
 
   while (true) {
     const res = await fetch(
-      `https://${brand.cafe24_mall_id}.cafe24api.com/api/v2/admin/products?limit=${limit}&offset=${offset}&display=T&selling=T&fields=product_no,product_name,price,detail_image,list_image,selling`,
+      `https://${brand.cafe24_mall_id}.cafe24api.com/api/v2/admin/products?limit=${limit}&offset=${offset}&display=T&selling=T&fields=product_no,product_name,price,detail_image,list_image,selling,description`,
       { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
     );
 
     if (!res.ok) {
-      const err = await res.text();
-      console.error('[Cafe24 Sync] products fetch error:', err);
+      console.error('[Cafe24 Sync] products fetch error:', await res.text());
       break;
     }
 
@@ -185,33 +301,75 @@ export async function handleCafe24ProductsSync(url: URL, env: Env): Promise<Resp
     offset += limit;
   }
 
-  if (allProducts.length > 0) {
-    const rows = allProducts.map((p: any) => ({
-      brand_id: brandId,
-      cafe24_product_no: p.product_no,
-      product_name: p.product_name,
-      price: parseFloat(p.price ?? '0'),
-      image_url: p.detail_image || p.list_image || null,
-      product_url: `https://${brand.cafe24_mall_id}.cafe24.com/product/detail.html?product_no=${p.product_no}`,
-      is_active: p.selling === 'T',
-      synced_at: new Date().toISOString(),
-    }));
+  let syncedCount = 0;
 
-    const { error: upsertErr } = await supabase
+  for (const p of allProducts) {
+    const productUrl = `https://${brand.cafe24_mall_id}.cafe24.com/product/detail.html?product_no=${p.product_no}`;
+    const imageUrl = p.detail_image || p.list_image || null;
+
+    // Clozet products 테이블에 upsert
+    // 기존 매핑 확인
+    const { data: existingMapping } = await supabase
       .from('share2dm_cafe24_products')
-      .upsert(rows, { onConflict: 'brand_id,cafe24_product_no' });
+      .select('clozet_product_id')
+      .eq('brand_id', brandId)
+      .eq('cafe24_product_no', p.product_no)
+      .maybeSingle();
 
-    if (upsertErr) {
-      console.error('[Cafe24 Sync] upsert error:', upsertErr.message);
-      return new Response(JSON.stringify({ error: 'sync_failed' }), {
-        status: 500,
-        headers: CORS_HEADERS,
-      });
+    let clozetProductId = existingMapping?.clozet_product_id ?? null;
+
+    if (clozetProductId) {
+      // 기존 Clozet 상품 업데이트
+      await supabase
+        .from('products')
+        .update({
+          product_name: p.product_name,
+          price: parseFloat(p.price ?? '0'),
+          main_images: imageUrl ? [imageUrl] : [],
+          description: p.description || '',
+          status: p.selling === 'T' ? 'active' : 'inactive',
+        })
+        .eq('product_id', clozetProductId);
+    } else {
+      // 신규 Clozet 상품 생성
+      const { data: newProduct } = await supabase
+        .from('products')
+        .insert({
+          seller_id: brand.clozet_seller_id,
+          product_name: p.product_name,
+          price: parseFloat(p.price ?? '0'),
+          main_images: imageUrl ? [imageUrl] : [],
+          description: p.description || '',
+          keywords: [],
+          status: p.selling === 'T' ? 'active' : 'inactive',
+          store_name: storeName,
+        })
+        .select('product_id')
+        .single();
+
+      clozetProductId = newProduct?.product_id ?? null;
     }
+
+    // share2dm_cafe24_products 매핑 upsert
+    await supabase
+      .from('share2dm_cafe24_products')
+      .upsert({
+        brand_id: brandId,
+        cafe24_product_no: p.product_no,
+        product_name: p.product_name,
+        price: parseFloat(p.price ?? '0'),
+        image_url: imageUrl,
+        product_url: productUrl,
+        is_active: p.selling === 'T',
+        synced_at: new Date().toISOString(),
+        clozet_product_id: clozetProductId,
+      }, { onConflict: 'brand_id,cafe24_product_no' });
+
+    syncedCount++;
   }
 
-  console.log(`[Cafe24 Sync] brand_id=${brandId}: ${allProducts.length}개 상품 sync 완료`);
-  return new Response(JSON.stringify({ synced: allProducts.length }), {
+  console.log(`[Cafe24 Sync] brand_id=${brandId}: ${syncedCount}개 상품 sync 완료`);
+  return new Response(JSON.stringify({ synced: syncedCount }), {
     status: 200,
     headers: CORS_HEADERS,
   });
@@ -219,7 +377,7 @@ export async function handleCafe24ProductsSync(url: URL, env: Env): Promise<Resp
 
 /**
  * GET /cafe24/products/list?brand_id=...
- * 캐시된 Cafe24 상품 목록 반환 (캠페인 생성 시 상품 선택용)
+ * 캐시된 Cafe24 상품 목록 반환 (Dashboard 캠페인 생성 시 상품 선택용)
  */
 export async function handleCafe24ProductsList(url: URL, env: Env): Promise<Response> {
   const brandId = url.searchParams.get('brand_id');
@@ -244,14 +402,18 @@ export async function handleCafe24ProductsList(url: URL, env: Env): Promise<Resp
   });
 }
 
-// 토큰 만료 시 refresh token으로 갱신
+// Access token 만료 시 refresh
 async function getValidToken(
-  brand: { cafe24_mall_id: string; cafe24_access_token: string; cafe24_refresh_token: string; cafe24_token_expires_at: string | null },
+  brand: {
+    cafe24_mall_id: string;
+    cafe24_access_token: string;
+    cafe24_refresh_token: string;
+    cafe24_token_expires_at: string | null;
+  },
   brandId: string,
   env: Env,
   supabase: ReturnType<typeof createClient>
 ): Promise<string | null> {
-  // 만료 5분 전까지는 기존 토큰 사용
   if (brand.cafe24_token_expires_at) {
     const expiresAt = new Date(brand.cafe24_token_expires_at).getTime();
     if (expiresAt - Date.now() > 5 * 60 * 1000) {
@@ -261,7 +423,6 @@ async function getValidToken(
     return brand.cafe24_access_token;
   }
 
-  // Refresh
   const res = await fetch(`https://${brand.cafe24_mall_id}.cafe24api.com/api/v2/oauth/token`, {
     method: 'POST',
     headers: {
