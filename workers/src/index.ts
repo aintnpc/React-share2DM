@@ -4,6 +4,7 @@ import { handleTracking } from './tracking';
 import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
 import { handleClozetCallback, handleClozetContentLookup } from './clozet';
 import { handleCafe24Auth, handleCafe24Callback, handleCafe24ProductsSync, handleCafe24ProductsList } from './cafe24';
+import { handleCafe24Webhook } from './cafe24webhook';
 import { handleIssueBillingKey, handleBillingCron } from './billing';
 import { handleQueueCron, handleQueueStatus, handleAdminStats } from './queue-processor';
 import { createClient } from '@supabase/supabase-js';
@@ -269,6 +270,11 @@ export default {
       // Cafe24 상품 목록 조회 (GET /cafe24/products/list?brand_id=...)
       if (url.pathname === '/cafe24/products/list' && request.method === 'GET') {
         return handleCafe24ProductsList(url, env);
+      }
+
+      // Cafe24 Webhook (POST /cafe24/webhook) — 상품/주문/재고 변경 자동 반영
+      if (url.pathname === '/cafe24/webhook' && request.method === 'POST') {
+        return handleCafe24Webhook(request, env);
       }
 
       // Clozet B.O에서 연결 완료 후 리다이렉트 (GET /auth/clozet/callback?token=...&brand_id=...&state=...&origin=...)

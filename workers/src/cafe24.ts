@@ -7,7 +7,7 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const CAFE24_SCOPES = 'mall.read_product mall.read_store';
+const CAFE24_SCOPES = 'mall.read_product mall.read_store mall.read_order mall.read_salesreport mall.read_category';
 const FRONTEND_ORIGIN = 'https://share2dm.xyz';
 
 function buildAuthUrl(mallId: string, clientId: string, redirectUri: string, state: string): string {

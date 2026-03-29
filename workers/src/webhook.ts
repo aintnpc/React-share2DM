@@ -1,6 +1,65 @@
 import { Env, WebhookBody, MessagingEvent, CommentChangeValue } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PLAN_CONFIG, PlanName } from './plan-config';
+import { sendDmLimitWarning, sendDmLimitExceeded } from './email';
+
+/**
+ * 플랜 DM 한도 체크 + 80% 경고 / 초과 이메일 발송 (월 1회)
+ * @returns true = 발송 가능, false = 한도 초과로 차단
+ */
+async function checkDmLimit(
+  supabase: SupabaseClient,
+  env: Env,
+  brand: any,
+): Promise<boolean> {
+  const planLimits = PLAN_CONFIG[brand.plan as PlanName];
+  if (!planLimits || planLimits.dmPerMonth === -1) return true;
+
+  const startOfMonth = new Date();
+  startOfMonth.setUTCDate(1);
+  startOfMonth.setUTCHours(0, 0, 0, 0);
+
+  const { count } = await supabase
+    .from('share2dm_dm_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('brand_id', brand.id)
+    .gte('dm_sent_at', startOfMonth.toISOString());
+
+  const usedCount = count ?? 0;
+  const limit = planLimits.dmPerMonth;
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+  if (usedCount >= limit) {
+    // 초과 이메일 (월 1회)
+    if (env.RESEND_API_KEY && brand.notification_email && brand.dm_exceeded_sent_month !== currentMonth) {
+      try {
+        await sendDmLimitExceeded(env.RESEND_API_KEY, brand.notification_email, brand.brand_name, brand.plan, limit);
+        await supabase.from('share2dm_brands').update({ dm_exceeded_sent_month: currentMonth }).eq('id', brand.id);
+      } catch (e: any) {
+        console.error('[DM Limit] Failed to send exceeded email:', e.message);
+      }
+    }
+    console.log(`[DM Limit] Blocked brand ${brand.id}: ${usedCount}/${limit} (plan: ${brand.plan})`);
+    return false;
+  }
+
+  // 80% 경고 이메일 (월 1회)
+  if (
+    env.RESEND_API_KEY &&
+    brand.notification_email &&
+    usedCount >= limit * 0.8 &&
+    brand.dm_warning_sent_month !== currentMonth
+  ) {
+    try {
+      await sendDmLimitWarning(env.RESEND_API_KEY, brand.notification_email, brand.brand_name, brand.plan, usedCount, limit);
+      await supabase.from('share2dm_brands').update({ dm_warning_sent_month: currentMonth }).eq('id', brand.id);
+    } catch (e: any) {
+      console.error('[DM Limit] Failed to send warning email:', e.message);
+    }
+  }
+
+  return true;
+}
 
 export async function handleWebhookVerification(
   request: Request,
@@ -64,7 +123,7 @@ export async function handleWebhookEvent(
         if (entry.messaging?.length) {
           console.log('[Webhook] messaging format, events:', entry.messaging.length);
           for (const event of entry.messaging) {
-            await processMessagingEvent(event, brandIgId, supabase);
+            await processMessagingEvent(event, brandIgId, supabase, env);
           }
         }
 
@@ -73,9 +132,9 @@ export async function handleWebhookEvent(
           console.log('[Webhook] changes format, changes:', entry.changes.length);
           for (const change of entry.changes) {
             if (change.field === 'messages' && change.value) {
-              await processMessagingEvent(change.value as MessagingEvent, brandIgId, supabase);
+              await processMessagingEvent(change.value as MessagingEvent, brandIgId, supabase, env);
             } else if (change.field === 'comments' && change.value) {
-              await handleCommentEvent(change.value as CommentChangeValue, brandIgId, supabase);
+              await handleCommentEvent(change.value as CommentChangeValue, brandIgId, supabase, env);
             }
           }
         }
@@ -97,7 +156,8 @@ export async function handleWebhookEvent(
 async function processMessagingEvent(
   event: MessagingEvent,
   brandIgId: string,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  env: Env
 ): Promise<void> {
   console.log('[DM] event:', JSON.stringify(event));
 
@@ -165,7 +225,9 @@ async function processMessagingEvent(
     .select('*')
     .eq('ig_contents_id', reelVideoId)
     .eq('brand_id', brand.id)
+    .eq('campaign_type', 'reel_share')
     .eq('is_active', true)
+    .is('deleted_at', null)
     .single();
 
   console.log('[DM] campaign lookup reelVideoId:', reelVideoId, '→', campaign?.id ?? 'NOT FOUND');
@@ -173,26 +235,10 @@ async function processMessagingEvent(
   if (!campaign) return;
 
   // DM limit check
-  const planLimits = PLAN_CONFIG[brand.plan as PlanName];
-  if (planLimits && planLimits.dmPerMonth !== -1) {
-    const startOfMonth = new Date();
-    startOfMonth.setUTCDate(1);
-    startOfMonth.setUTCHours(0, 0, 0, 0);
-
-    const { count } = await supabase
-      .from('share2dm_dm_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('brand_id', brand.id)
-      .gte('dm_sent_at', startOfMonth.toISOString());
-
-    if ((count ?? 0) >= planLimits.dmPerMonth) {
-      console.log(`[Webhook] DM limit reached for brand ${brand.id}: ${count}/${planLimits.dmPerMonth} (plan: ${brand.plan})`);
-      return;
-    }
-  }
+  if (!(await checkDmLimit(supabase, env, brand))) return;
 
   // Build tracking URL and message
-  const trackingUrl = `https://share2dm-webhook.share2dm.workers.dev/t/${campaign.id}/${senderId}`;
+  const trackingUrl = `https://go.share2dm.xyz/t/${campaign.id}/${senderId}`;
   const message = `${campaign.response_message}\n\n${trackingUrl}`;
 
   // Enqueue DM (will be processed by cron with rate limiting)
@@ -290,7 +336,8 @@ async function processMessagingEvent(
 async function handleCommentEvent(
   value: CommentChangeValue,
   brandIgId: string,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  env: Env
 ): Promise<void> {
   console.log('[Comment] event:', JSON.stringify(value));
 
@@ -340,6 +387,7 @@ async function handleCommentEvent(
     .eq('brand_id', brand.id)
     .eq('campaign_type', 'comment_automation')
     .eq('is_active', true)
+    .is('deleted_at', null)
     .maybeSingle();
 
   console.log('[Comment] campaign lookup mediaId:', mediaId, '→', campaign?.id ?? 'NOT FOUND');
@@ -356,23 +404,7 @@ async function handleCommentEvent(
   }
 
   // 플랜 DM 한도 체크
-  const planLimits = PLAN_CONFIG[brand.plan as PlanName];
-  if (planLimits && planLimits.dmPerMonth !== -1) {
-    const startOfMonth = new Date();
-    startOfMonth.setUTCDate(1);
-    startOfMonth.setUTCHours(0, 0, 0, 0);
-
-    const { count } = await supabase
-      .from('share2dm_dm_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('brand_id', brand.id)
-      .gte('dm_sent_at', startOfMonth.toISOString());
-
-    if ((count ?? 0) >= planLimits.dmPerMonth) {
-      console.log(`[Comment] DM limit reached for brand ${brand.id}: ${count}/${planLimits.dmPerMonth}`);
-      return;
-    }
-  }
+  if (!(await checkDmLimit(supabase, env, brand))) return;
 
   // 1. 공개 댓글 답글 즉시 발송
   let commentRepliedAt: string | null = null;
@@ -418,7 +450,7 @@ async function handleCommentEvent(
   }
 
   // 3. DM 큐에 추가 (기존 큐 시스템 재사용)
-  const trackingUrl = `https://share2dm-webhook.share2dm.workers.dev/t/${campaign.id}/${commenterIgId}`;
+  const trackingUrl = `https://go.share2dm.xyz/t/${campaign.id}/${commenterIgId}`;
   const message = `${campaign.response_message}\n\n${trackingUrl}`;
 
   const { error: queueError } = await supabase.from('share2dm_dm_queue').upsert({

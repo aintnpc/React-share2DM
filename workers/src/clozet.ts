@@ -15,7 +15,53 @@ const CORS_HEADERS = {
  * 2. share2dm_brands에 clozet_seller_id, clozet_store_name, clozet_connected_at 업데이트
  * 3. 프론트엔드 대시보드로 리다이렉트
  */
-export async function handleClozetCallback(request: Request, env: Env): Promise<Response> {
+async function syncIgContentsCodes(
+  sellerProfileId: string,
+  igAccountId: string,
+  igAccessToken: string,
+  supabase: any
+): Promise<void> {
+  // ig_contents_code가 없는 콘텐츠만 조회
+  const { data: contents } = await supabase
+    .from('contents')
+    .select('id, short_code')
+    .eq('creator_id', sellerProfileId)
+    .is('ig_contents_code', null)
+    .not('short_code', 'is', null) as { data: { id: string; short_code: string }[] | null };
+
+  if (!contents?.length) return;
+
+  // IG Graph API에서 미디어 목록 페이징 조회 → shortcode 매핑 테이블 구성
+  const shortcodeMap: Record<string, string> = {}; // shortcode → media_id
+  let nextUrl: string | null =
+    `https://graph.facebook.com/v21.0/${igAccountId}/media?fields=id,shortcode&limit=50&access_token=${igAccessToken}`;
+
+  while (nextUrl && Object.keys(shortcodeMap).length < 500) {
+    const res = await fetch(nextUrl);
+    const data: any = await res.json();
+    if (data.error || !data.data) break;
+    for (const m of data.data) {
+      if (m.shortcode) shortcodeMap[m.shortcode] = m.id;
+    }
+    nextUrl = data.paging?.next || null;
+  }
+
+  // 매칭된 것만 업데이트
+  for (const content of contents) {
+    const mediaId = shortcodeMap[content.short_code];
+    if (!mediaId) continue;
+    await supabase
+      .from('contents')
+      .update({ ig_contents_code: mediaId })
+      .eq('id', content.id);
+  }
+
+  console.log(
+    `[Clozet Sync] seller ${sellerProfileId}: ${contents.length} contents checked, ${Object.keys(shortcodeMap).length} IG media fetched`
+  );
+}
+
+export async function handleClozetCallback(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
   const brandId = url.searchParams.get('brand_id');
@@ -89,6 +135,19 @@ export async function handleClozetCallback(request: Request, env: Env): Promise<
     .update({ used: true })
     .eq('token', token);
 
+  // 5. IG media ID 백그라운드 동기화
+  const { data: brand } = await supabase
+    .from('share2dm_brands')
+    .select('ig_account_id, ig_access_token')
+    .eq('id', brandId)
+    .single();
+
+  if (brand?.ig_account_id && brand?.ig_access_token) {
+    ctx.waitUntil(
+      syncIgContentsCodes(sellerProfile.id, brand.ig_account_id, brand.ig_access_token, supabase)
+    );
+  }
+
   console.log('[Clozet CB] connected: brand_id:', brandId, 'seller:', sellerProfile.store_name);
 
   // 5. 대시보드로 성공 리다이렉트 (state 포함해서 프론트에서 nonce 검증 가능)
@@ -107,6 +166,7 @@ export async function handleClozetCallback(request: Request, env: Env): Promise<
 export async function handleClozetContentLookup(url: URL, env: Env): Promise<Response> {
   const brandId = url.searchParams.get('brand_id');
   const igCode = url.searchParams.get('ig_code'); // Instagram shortcode
+  const mediaId = url.searchParams.get('media_id'); // Instagram media ID (optional)
 
   if (!brandId || !igCode) {
     return new Response(JSON.stringify({ error: 'brand_id and ig_code required' }), {
@@ -145,12 +205,20 @@ export async function handleClozetContentLookup(url: URL, env: Env): Promise<Res
     });
   }
 
+  // ig_contents_code가 없고 media_id가 넘어왔으면 채워줌
+  if (!content.ig_contents_code && mediaId) {
+    await supabase
+      .from('contents')
+      .update({ ig_contents_code: mediaId })
+      .eq('id', content.id);
+  }
+
   return new Response(
     JSON.stringify({
       found: true,
       content_id: content.id,
       short_code: content.short_code,
-      clozet_url: `https://app.clozet.my/reel/${content.short_code}`,
+      clozet_url: `https://clozet.my/reel/${content.short_code}`,
     }),
     { status: 200, headers: CORS_HEADERS }
   );

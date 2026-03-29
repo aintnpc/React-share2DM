@@ -19,7 +19,7 @@ const DemoVideo = () => {
               <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
             </div>
             <div className="mx-auto flex px-4 py-1 text-xs text-gray-500 bg-[#0B0914] rounded-md border border-white/5">
-              share2dm.com/demo
+              share2dm.xyz/demo
             </div>
           </div>
 

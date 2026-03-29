@@ -63,7 +63,7 @@ const Pricing = () => {
             <span className="text-gray-500"> {t('원/월', 'KRW/mo')}</span>
           </div>
           <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('월 1,000건 DM 발송', '1,000 DMs / month')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('월 5,000건 DM 발송', '5,000 DMs / month')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 1개', '1 campaign')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-gray-500 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
           </ul>
@@ -83,8 +83,8 @@ const Pricing = () => {
             <span className="text-gray-500"> {t('원/월', 'KRW/mo')}</span>
           </div>
           <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('월 10,000건 DM 발송', '10,000 DMs / month')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 3개', '3 campaigns')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('월 50,000건 DM 발송', '50,000 DMs / month')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('캠페인 5개', '5 campaigns')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-gray-500 shrink-0" /><span className="text-gray-300 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-gray-500 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button><br /><span className="text-gray-500 text-xs">(Clozet Only)</span></span></li>
           </ul>
           <button onClick={() => handlePlanSelect('standard')} className="w-full py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors">
@@ -106,8 +106,8 @@ const Pricing = () => {
             <span className="text-purple-300/60"> {t('원/월', 'KRW/mo')}</span>
           </div>
           <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm font-medium">{t('월 50,000건 DM 발송', '50,000 DMs / month')}</span></li>
-            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('캠페인 10개', '10 campaigns')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm font-medium">{t('월 200,000건 DM 발송', '200,000 DMs / month')}</span></li>
+            <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('캠페인 15개', '15 campaigns')}</span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-white text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-pink-300/60 hover:text-white transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button></span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-green-400 shrink-0" /><span className="text-green-400 text-sm font-medium">{t('자사몰(D2C) 연결 가능', 'D2C store connection')}</span></li>
           </ul>
