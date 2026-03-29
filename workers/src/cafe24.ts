@@ -217,11 +217,68 @@ export async function handleCafe24Callback(request: Request, env: Env): Promise<
     return Response.redirect(`${dashboardUrl}?cafe24_error=db_failed`, 302);
   }
 
+  // 6. Cafe24 Webhook 자동 등록
+  await registerCafe24Webhooks(mallId, tokenData.access_token, env);
+
   console.log(`[Cafe24 CB] connected: brand_id=${brandId}, mall_id=${mallId}, seller_profile=${sellerProfileId}`);
   return Response.redirect(
     `${dashboardUrl}?cafe24_connected=true&cafe24_mall=${encodeURIComponent(mallId)}`,
     302
   );
+}
+
+/**
+ * Cafe24 Webhook 등록
+ * OAuth 연결 완료 시 자동 호출.
+ * 이미 등록된 webhook은 중복 등록되지 않음 (Cafe24가 URL 기준으로 dedup).
+ */
+async function registerCafe24Webhooks(mallId: string, accessToken: string, env: Env): Promise<void> {
+  const webhookUrl = 'https://go.share2dm.xyz/cafe24/webhook';
+
+  const events = [
+    { event_type: 'product_created',       resource_version: '2024-03-01' },
+    { event_type: 'product_updated',       resource_version: '2024-03-01' },
+    { event_type: 'product_deleted',       resource_version: '2024-03-01' },
+    { event_type: 'order_placed',          resource_version: '2024-03-01' },
+    { event_type: 'order_paid',            resource_version: '2024-03-01' },
+  ];
+
+  for (const event of events) {
+    try {
+      const res = await fetch(
+        `https://${mallId}.cafe24api.com/api/v2/webhooks`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'X-Cafe24-Client-Id': env.CAFE24_CLIENT_ID,
+          },
+          body: JSON.stringify({
+            shop_no: 1,
+            event_type: event.event_type,
+            resource_version: event.resource_version,
+            endpoint: webhookUrl,
+          }),
+        }
+      );
+
+      const result = await res.json() as any;
+
+      if (!res.ok) {
+        // 409 = 이미 등록된 webhook → 정상
+        if (res.status === 409) {
+          console.log(`[Cafe24 Webhook Reg] 이미 등록됨: ${event.event_type}`);
+        } else {
+          console.error(`[Cafe24 Webhook Reg] 등록 실패: ${event.event_type}`, result);
+        }
+      } else {
+        console.log(`[Cafe24 Webhook Reg] 등록 완료: ${event.event_type}`);
+      }
+    } catch (e: any) {
+      console.error(`[Cafe24 Webhook Reg] 오류: ${event.event_type}`, e.message);
+    }
+  }
 }
 
 /**
