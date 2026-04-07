@@ -8,7 +8,7 @@ const CORS_HEADERS = {
 };
 
 const CAFE24_SCOPES = 'mall.read_product mall.read_store mall.read_order mall.read_salesreport mall.read_category';
-const FRONTEND_ORIGIN = 'https://share2dm.xyz';
+const FRONTEND_ORIGIN = 'https://clozet.my';
 
 function buildAuthUrl(mallId: string, clientId: string, redirectUri: string, state: string): string {
   const params = new URLSearchParams({
