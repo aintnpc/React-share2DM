@@ -38,7 +38,7 @@ export default function BillingSuccess() {
         }
 
         setStatus('success');
-        setTimeout(() => navigate('/dashboard'), 2000);
+        setTimeout(() => { window.location.href = 'https://dashboard.clozet.my'; }, 2000);
       } catch {
         setStatus('error');
         setErrorMsg('서버 요청 중 오류가 발생했습니다.');

@@ -31,7 +31,7 @@ const Pricing = () => {
       return;
     }
     if (plan === 'free') {
-      navigate('/dashboard');
+      window.location.href = 'https://dashboard.clozet.my';
       return;
     }
     requestBilling(plan, brandId);

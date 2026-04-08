@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LangProvider } from './lib/i18n';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/Home';
 import Pricing from './pages/Pricing';
@@ -15,9 +14,12 @@ import DataDeletion from './pages/terms/DataDeletion';
 import Admin from './pages/Admin';
 import LandingLayout from './layouts/LandingLayout';
 
-function App() {
-  const isLoggedIn = !!localStorage.getItem('brand_id');
+function ExternalRedirect({ to }: { to: string }) {
+  useEffect(() => { window.location.href = to; }, [to]);
+  return null;
+}
 
+function App() {
   return (
     <LangProvider>
     <BrowserRouter>
@@ -36,7 +38,7 @@ function App() {
         <Route path="/billing/fail" element={<BillingFail />} />
         <Route
           path="/dashboard"
-          element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}
+          element={<ExternalRedirect to="https://dashboard.clozet.my" />}
         />
 
         {/* Admin */}

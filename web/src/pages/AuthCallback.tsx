@@ -28,7 +28,7 @@ export default function AuthCallback() {
 
       setTimeout(() => setStep1Done(true), 400);
       setTimeout(() => setStep2Done(true), 1000);
-      setTimeout(() => { window.location.href = '/dashboard'; }, 2200);
+      setTimeout(() => { window.location.href = 'https://dashboard.clozet.my'; }, 2200);
       return;
     }
 
