@@ -168,6 +168,130 @@ async function processOAuth(code: string, redirectUri: string, env: Env) {
   return { brand, webhookSubscribed };
 }
 
+// POST /auth/init-from-token — Clozet BackOffice calls this after Meta OAuth login
+// Body: { access_token: string, clozet_seller_id: string, notification_email?: string }
+export async function handleInitFromToken(
+  request: Request,
+  env: Env
+): Promise<Response> {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    const body: { access_token: string; clozet_seller_id: string; notification_email?: string } = await request.json();
+    const { access_token, clozet_seller_id, notification_email } = body;
+
+    if (!access_token || !clozet_seller_id) {
+      return new Response(JSON.stringify({ error: 'access_token and clozet_seller_id required' }), {
+        status: 400, headers: corsHeaders,
+      });
+    }
+
+    // 1. Exchange user token for long-lived token
+    const longTokenParams = new URLSearchParams({
+      grant_type: 'fb_exchange_token',
+      client_id: env.META_APP_ID,
+      client_secret: env.META_APP_SECRET,
+      fb_exchange_token: access_token,
+    });
+    const longTokenRes = await fetch(
+      `https://graph.facebook.com/v21.0/oauth/access_token?${longTokenParams}`
+    );
+    const longTokenData: any = await longTokenRes.json();
+    const longToken = longTokenData.access_token || access_token;
+
+    // 2. Get Facebook Pages with IG Business Account
+    const pagesRes = await fetch(
+      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${longToken}`
+    );
+    const pagesData: any = await pagesRes.json();
+
+    let pageWithIG = pagesData.data?.find((p: any) => p.instagram_business_account?.id);
+
+    // Try Business Manager if no pages found
+    if (!pageWithIG) {
+      const bizRes = await fetch(`https://graph.facebook.com/v21.0/me/businesses?access_token=${longToken}`);
+      const bizData: any = await bizRes.json();
+      if (bizData.data?.length) {
+        for (const biz of bizData.data) {
+          const bizPagesRes = await fetch(
+            `https://graph.facebook.com/v21.0/${biz.id}/owned_pages?fields=id,name,access_token,instagram_business_account&access_token=${longToken}`
+          );
+          const bizPagesData: any = await bizPagesRes.json();
+          pageWithIG = bizPagesData.data?.find((p: any) => p.instagram_business_account?.id);
+          if (pageWithIG) break;
+        }
+      }
+    }
+
+    if (!pageWithIG?.instagram_business_account) {
+      return new Response(JSON.stringify({ error: 'IG 비즈니스 계정을 찾을 수 없습니다.' }), {
+        status: 400, headers: corsHeaders,
+      });
+    }
+
+    const igAccountId = pageWithIG.instagram_business_account.id;
+    const brandName = pageWithIG.name;
+    const pageAccessToken = pageWithIG.access_token || longToken;
+    const pageId = pageWithIG.id;
+
+    // 3. Get IG username
+    const igUserRes = await fetch(
+      `https://graph.facebook.com/v21.0/${igAccountId}?fields=username&access_token=${pageAccessToken}`
+    );
+    const igUserData: any = await igUserRes.json();
+    const igUsername = igUserData.username ?? null;
+
+    // 4. Subscribe page to webhook
+    await fetch(`https://graph.facebook.com/v21.0/${pageId}/subscribed_apps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscribed_fields: ['messages'], access_token: pageAccessToken }),
+    });
+
+    // 5. Upsert share2dm_brands
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+    const expiresAt = longTokenData.expires_in
+      ? new Date(Date.now() + longTokenData.expires_in * 1000).toISOString()
+      : null;
+
+    const { data: brand, error } = await supabase
+      .from('share2dm_brands')
+      .upsert(
+        {
+          brand_name: brandName,
+          ig_account_id: igAccountId,
+          ig_access_token: pageAccessToken,
+          ig_username: igUsername,
+          token_expires_at: expiresAt,
+          clozet_seller_id,
+          ...(notification_email ? { notification_email } : {}),
+        },
+        { onConflict: 'ig_account_id' }
+      )
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    // Also update clozet_seller_id if record existed by ig_account_id but didn't have it
+    if (brand && !brand.clozet_seller_id) {
+      await supabase.from('share2dm_brands').update({ clozet_seller_id }).eq('id', brand.id);
+    }
+
+    return new Response(
+      JSON.stringify({ brand_id: brand.id, ig_username: igUsername, brand_name: brandName }),
+      { status: 200, headers: corsHeaders }
+    );
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500, headers: corsHeaders,
+    });
+  }
+}
+
 // GET /auth/callback — Facebook redirects here with ?code=...&state=...
 export async function handleOAuthCallbackGet(
   request: Request,

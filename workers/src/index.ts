@@ -1,7 +1,7 @@
 import { Env } from './types';
 import { handleWebhookVerification, handleWebhookEvent } from './webhook';
 import { handleTracking } from './tracking';
-import { handleOAuthCallback, handleOAuthCallbackGet } from './auth';
+import { handleOAuthCallback, handleOAuthCallbackGet, handleInitFromToken } from './auth';
 import { handleClozetCallback, handleClozetContentLookup } from './clozet';
 import { handleCafe24Auth, handleCafe24Callback, handleCafe24ProductsSync, handleCafe24ProductsList } from './cafe24';
 import { handleCafe24Webhook } from './cafe24webhook';
@@ -225,6 +225,11 @@ export default {
       // OAuth callback legacy (POST /auth/callback)
       if (url.pathname === '/auth/callback' && request.method === 'POST') {
         return handleOAuthCallback(request, env);
+      }
+
+      // Init brand from Clozet BackOffice token (POST /auth/init-from-token)
+      if (url.pathname === '/auth/init-from-token' && request.method === 'POST') {
+        return handleInitFromToken(request, env);
       }
 
       // Webhook verification (GET /webhook)
