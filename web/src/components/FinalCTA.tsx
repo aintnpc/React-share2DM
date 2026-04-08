@@ -24,7 +24,7 @@ const FinalCTA = () => {
         </p>
         <button
           onClick={() => navigate('/login')}
-          className="inline-flex items-center justify-center gap-3 px-10 py-5 text-xl font-extrabold text-white bg-[#0B0914] rounded-full hover:scale-105 transition-transform shadow-[0_10px_30px_rgba(0,0,0,0.3)]"
+          className="inline-flex items-center justify-center gap-3 px-10 py-5 text-xl font-extrabold text-white bg-gray-900 rounded-full hover:scale-105 transition-transform shadow-[0_10px_30px_rgba(0,0,0,0.3)]"
         >
           <Zap className="w-7 h-7 fill-yellow-400 text-yellow-400" />
           {t('1초만에 연결하기', 'Connect in 1 Second')}

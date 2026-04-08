@@ -46,23 +46,23 @@ const FAQ = () => {
   const faqs = lang === 'ko' ? faqsKo : faqsEn;
 
   return (
-    <section className="py-24 bg-[#0B0914] relative z-10 border-t border-white/5">
+    <section className="py-24 bg-gray-50 relative z-10 border-t border-gray-100">
       <div className="max-w-4xl mx-auto px-6">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{t('자주 묻는 질문', 'Frequently Asked Questions')}</h2>
-          <p className="text-gray-400 text-lg">{t('새로운 방식에 대한 궁금증을 해결해 드립니다.', 'Get answers to your questions about this new approach.')}</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('자주 묻는 질문', 'Frequently Asked Questions')}</h2>
+          <p className="text-gray-500 text-lg">{t('새로운 방식에 대한 궁금증을 해결해 드립니다.', 'Get answers to your questions about this new approach.')}</p>
         </div>
         <div className="space-y-4">
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className={`border ${openIndex === index ? 'border-purple-500/50 bg-[#151221]' : 'border-white/10 bg-[#0B0914]'} rounded-2xl overflow-hidden transition-all`}
+              className={`border ${openIndex === index ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white'} rounded-2xl overflow-hidden transition-all shadow-sm`}
             >
               <button
                 className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
               >
-                <span className={`font-semibold ${openIndex === index ? 'text-white' : 'text-gray-300'}`}>{faq.q}</span>
+                <span className={`font-semibold ${openIndex === index ? 'text-gray-900' : 'text-gray-700'}`}>{faq.q}</span>
                 {openIndex === index ? (
                   <ChevronUp className="w-5 h-5 text-purple-400 flex-shrink-0" />
                 ) : (
@@ -72,7 +72,7 @@ const FAQ = () => {
               <div
                 className={`px-6 overflow-hidden transition-all duration-300 ease-in-out ${openIndex === index ? 'max-h-48 pb-5 opacity-100' : 'max-h-0 opacity-0'}`}
               >
-                <p className="text-gray-400 text-sm leading-relaxed">{faq.a}</p>
+                <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
               </div>
             </div>
           ))}
