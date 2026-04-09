@@ -2,20 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 import { useLang } from '../lib/i18n';
-import { supabase } from '../lib/supabase';
 
 export default function Login() {
   const navigate = useNavigate();
   const { t } = useLang();
 
-  const handleInstagramLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        redirectTo: 'https://dashboard.clozet.my/auth/callback',
-        scopes: 'instagram_basic,instagram_manage_messages,instagram_manage_comments,pages_show_list,pages_manage_metadata,pages_messaging,business_management',
-      },
-    });
+  const handleInstagramLogin = () => {
+    window.location.href = 'https://dashboard.clozet.my/login';
   };
 
   return (
