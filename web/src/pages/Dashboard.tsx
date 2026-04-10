@@ -12,7 +12,7 @@ interface Campaign {
   ig_contents_id: string;
   response_message: string;
   product_url: string;
-  product_url_source: 'manual' | 'clozet';
+  product_url_source: 'manual' | 'clozet' | 'cafe24';
   clozet_content_id: string | null;
   clozet_short_code: string | null;
   is_active: boolean;
