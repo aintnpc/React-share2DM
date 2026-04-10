@@ -39,13 +39,13 @@ const ClozetConnect = () => {
   return (
     <div className="min-h-screen pt-32 pb-24 px-6 relative bg-white flex flex-col items-center">
       {/* Background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-r from-pink-400/15 to-purple-400/15 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-brand-gradient blur-[150px] rounded-full opacity-15 pointer-events-none" />
 
       {/* Header */}
       <div className="text-center relative z-10 mb-20">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-200 mb-6">
-          <Sparkles className="w-4 h-4 text-pink-500" />
-          <span className="text-sm font-semibold text-pink-600">Clozet Connect</span>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-lavender/15 border border-brand-lavender/30 mb-6">
+          <Sparkles className="w-4 h-4 text-brand-violet" />
+          <span className="text-sm font-semibold text-brand-dark">Clozet Connect</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">
           {t('영상 하나에, 여러 상품을 담다', 'Multiple Products, One Video')}
@@ -58,7 +58,7 @@ const ClozetConnect = () => {
         </p>
         <p className="text-sm text-gray-400">
           Powered by{' '}
-          <a href="https://clozet.my" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:text-purple-600 transition-colors font-medium">
+          <a href="https://clozet.my" target="_blank" rel="noopener noreferrer" className="text-brand-violet hover:text-brand-dark transition-colors font-medium">
             Clozet
           </a>
           {' '}{t('— 숏폼 커머스 앱', '— Short-form Commerce App')}
@@ -202,7 +202,7 @@ const ClozetConnect = () => {
           </div>
 
           {/* D2C Store */}
-          <div className="p-8 rounded-3xl bg-gradient-to-b from-purple-50 to-white border border-purple-200 flex flex-col relative overflow-hidden shadow-[0_0_40px_rgba(147,51,234,0.08)]">
+          <div className="p-8 rounded-3xl bg-gradient-to-b from-brand-lavender/15 to-white border border-brand-lavender/30 flex flex-col relative overflow-hidden shadow-[0_0_40px_rgba(201,168,236,0.15)]">
             <div className="absolute top-0 inset-x-0 flex justify-center transform -translate-y-1/2">
               <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">Growth</span>
             </div>
@@ -231,7 +231,7 @@ const ClozetConnect = () => {
             </ul>
             <button
               onClick={() => navigate('/pricing')}
-              className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20"
+              className="w-full py-3 rounded-xl bg-brand-gradient text-white font-bold hover:opacity-90 transition-opacity shadow-lg shadow-brand-violet/20"
             >
               {t('Growth 플랜 보기', 'View Growth Plan')} <ArrowRight className="inline w-4 h-4 ml-1" />
             </button>
@@ -249,7 +249,7 @@ const ClozetConnect = () => {
         </p>
         <button
           onClick={() => navigate('/login')}
-          className="px-8 py-4 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-purple-600/30"
+          className="px-8 py-4 rounded-full bg-brand-gradient text-white font-bold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-brand-violet/30"
         >
           {t('지금 시작하기', 'Get Started Now')} <ArrowRight className="inline w-5 h-5 ml-1" />
         </button>

@@ -46,13 +46,13 @@ const Navbar = () => {
         <div className="flex items-center text-xs font-medium border border-gray-200 rounded-full overflow-hidden">
           <button
             onClick={() => setLang('ko')}
-            className={`px-2.5 py-1.5 transition-colors ${lang === 'ko' ? 'bg-purple-100 text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`px-2.5 py-1.5 transition-colors ${lang === 'ko' ? 'bg-brand-lavender/20 text-brand-dark' : 'text-gray-400 hover:text-gray-600'}`}
           >
             KR
           </button>
           <button
             onClick={() => setLang('en')}
-            className={`px-2.5 py-1.5 transition-colors ${lang === 'en' ? 'bg-purple-100 text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`px-2.5 py-1.5 transition-colors ${lang === 'en' ? 'bg-brand-lavender/20 text-brand-dark' : 'text-gray-400 hover:text-gray-600'}`}
           >
             EN
           </button>

@@ -19,8 +19,8 @@ const UseCases = () => {
             <h3 className="text-xl font-bold text-gray-900 mb-4">{t('브랜드 / 쇼핑몰', 'Brands / E-commerce')}</h3>
             <p className="text-gray-500 text-sm leading-relaxed">{t("CS 리소스를 낭비하지 마세요. 번거로운 '댓글 확인 후 DM 전송' 과정을 100% 자동화하여 구매 전환율을 극대화합니다.", "Stop wasting CS resources. Fully automate the 'check comment then send DM' workflow and maximize purchase conversion rates.")}</p>
           </div>
-          <div className="p-8 rounded-3xl bg-purple-50 border border-purple-200 flex flex-col group hover:border-purple-300 transition-all shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+          <div className="p-8 rounded-3xl bg-brand-lavender/10 border border-brand-lavender/30 flex flex-col group hover:border-brand-lavender/50 transition-all shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-brand-lavender/20 text-brand-dark flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <Users className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-4">{t('크리에이터 / 인플루언서', 'Creators / Influencers')}</h3>

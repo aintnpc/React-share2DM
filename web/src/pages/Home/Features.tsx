@@ -43,36 +43,36 @@ const Features = () => {
             </ul>
           </div>
 
-          <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 relative overflow-hidden shadow-[0_0_50px_rgba(147,51,234,0.08)]">
+          <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-brand-pink/10 to-brand-violet/10 border border-brand-lavender/30 relative overflow-hidden shadow-[0_0_50px_rgba(201,168,236,0.15)]">
             <div className="absolute top-0 right-0 p-6">
               <div className="bg-purple-600 text-xs font-bold px-4 py-1.5 rounded-full text-white tracking-wide shadow-lg">Share2DM</div>
             </div>
             <div className="flex items-center gap-3 mb-8 relative z-10">
-              <div className="p-3 rounded-xl bg-purple-100 border border-purple-200">
-                <Share2 className="w-6 h-6 text-purple-500" />
+              <div className="p-3 rounded-xl bg-brand-lavender/20 border border-brand-lavender/30">
+                <Share2 className="w-6 h-6 text-brand-dark" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">{t('혁신: 공유 기반', 'Innovation: Share-Based')}</h3>
             </div>
             <ul className="space-y-8 relative z-10">
               <li className="flex gap-4">
-                <div className="mt-1 flex-shrink-0"><EyeOff className="w-6 h-6 text-purple-500" /></div>
+                <div className="mt-1 flex-shrink-0"><EyeOff className="w-6 h-6 text-brand-violet" /></div>
                 <div>
                   <h4 className="text-gray-900 font-semibold text-lg">{t('완전한 비공개 보장', 'Complete Privacy Guaranteed')}</h4>
-                  <p className="text-purple-800/60 mt-2 leading-relaxed">{t('공유 활동은 로그에 남지 않으며 다른 사람들은 절대 알 수 없음', 'Share activity leaves no log — no one else can ever see it')}</p>
+                  <p className="text-brand-dark/60 mt-2 leading-relaxed">{t('공유 활동은 로그에 남지 않으며 다른 사람들은 절대 알 수 없음', 'Share activity leaves no log — no one else can ever see it')}</p>
                 </div>
               </li>
               <li className="flex gap-4">
-                <div className="mt-1 flex-shrink-0"><MousePointerClick className="w-6 h-6 text-purple-500" /></div>
+                <div className="mt-1 flex-shrink-0"><MousePointerClick className="w-6 h-6 text-brand-violet" /></div>
                 <div>
                   <h4 className="text-gray-900 font-semibold text-lg">{t('단 2번의 탭으로 전환', 'Convert in Just 2 Taps')}</h4>
-                  <p className="text-purple-800/60 mt-2 leading-relaxed">{t('공유 버튼 클릭 → 브랜드 계정 선택만으로 즉시 자동 DM 발송', 'Tap share → select brand account → auto DM sent instantly')}</p>
+                  <p className="text-brand-dark/60 mt-2 leading-relaxed">{t('공유 버튼 클릭 → 브랜드 계정 선택만으로 즉시 자동 DM 발송', 'Tap share → select brand account → auto DM sent instantly')}</p>
                 </div>
               </li>
               <li className="flex gap-4">
-                <div className="mt-1 flex-shrink-0"><Zap className="w-6 h-6 text-purple-500" /></div>
+                <div className="mt-1 flex-shrink-0"><Zap className="w-6 h-6 text-brand-violet" /></div>
                 <div>
                   <h4 className="text-gray-900 font-semibold text-lg">{t('Lurker 타겟팅 성공', 'Successfully Target Lurkers')}</h4>
-                  <p className="text-purple-800/60 mt-2 leading-relaxed">{t('댓글 허들이 사라져 보기만 하던 90% 사용자들도 행동으로 이어짐', 'With the comment barrier gone, 90% of passive viewers now take action')}</p>
+                  <p className="text-brand-dark/60 mt-2 leading-relaxed">{t('댓글 허들이 사라져 보기만 하던 90% 사용자들도 행동으로 이어짐', 'With the comment barrier gone, 90% of passive viewers now take action')}</p>
                 </div>
               </li>
             </ul>

@@ -56,7 +56,7 @@ const FAQ = () => {
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className={`border ${openIndex === index ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white'} rounded-2xl overflow-hidden transition-all shadow-sm`}
+              className={`border ${openIndex === index ? 'border-brand-lavender/50 bg-brand-lavender/5' : 'border-gray-200 bg-white'} rounded-2xl overflow-hidden transition-all shadow-sm`}
             >
               <button
                 className="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none"
@@ -64,7 +64,7 @@ const FAQ = () => {
               >
                 <span className={`font-semibold ${openIndex === index ? 'text-gray-900' : 'text-gray-700'}`}>{faq.q}</span>
                 {openIndex === index ? (
-                  <ChevronUp className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                  <ChevronUp className="w-5 h-5 text-brand-violet flex-shrink-0" />
                 ) : (
                   <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
                 )}

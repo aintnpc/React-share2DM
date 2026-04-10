@@ -39,7 +39,7 @@ const Pricing = () => {
 
   return (
     <div className="min-h-screen pt-32 pb-24 px-6 relative bg-white flex flex-col items-center">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-r from-purple-400/15 to-indigo-400/15 blur-[150px] rounded-full pointer-events-none"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-brand-gradient blur-[150px] rounded-full opacity-15 pointer-events-none"></div>
 
       <div className="text-center relative z-10 mb-16">
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">{t('합리적인 요금제', 'Simple Pricing')}</h1>
@@ -93,7 +93,7 @@ const Pricing = () => {
         </div>
 
         {/* Growth Plan (Killer) */}
-        <div className="p-8 rounded-3xl bg-gradient-to-b from-purple-50 to-white border border-purple-200 flex flex-col relative shadow-[0_0_40px_rgba(147,51,234,0.08)] transform md:-translate-y-4">
+        <div className="p-8 rounded-3xl bg-gradient-to-b from-brand-lavender/15 to-white border border-brand-lavender/30 flex flex-col relative shadow-[0_0_40px_rgba(201,168,236,0.2)] transform md:-translate-y-4">
           <div className="absolute top-0 inset-x-0 flex justify-center transform -translate-y-1/2">
             <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">Killer</span>
           </div>
@@ -111,7 +111,7 @@ const Pricing = () => {
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-pink-400 shrink-0" /><span className="text-gray-700 text-sm">{t('Clozet Connect 제공', 'Clozet Connect included')}<button onClick={() => navigate('/clozet-connect')} className="inline-flex ml-1 align-middle text-pink-300 hover:text-pink-500 transition-colors"><HelpCircle className="w-3.5 h-3.5" /></button></span></li>
             <li className="flex items-start gap-3"><Check className="w-5 h-5 text-green-500 shrink-0" /><span className="text-green-600 text-sm font-medium">{t('자사몰(D2C) 연결 가능', 'D2C store connection')}</span></li>
           </ul>
-          <button onClick={() => handlePlanSelect('growth')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/20">
+          <button onClick={() => handlePlanSelect('growth')} className="w-full py-3 rounded-xl bg-brand-gradient text-white font-bold hover:opacity-90 transition-opacity shadow-lg shadow-brand-violet/20">
             {t('시작하기', 'Get Started')}
           </button>
         </div>

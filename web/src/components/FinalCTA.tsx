@@ -7,7 +7,7 @@ const FinalCTA = () => {
   const { t } = useLang();
 
   return (
-    <section className="py-24 bg-gradient-to-r from-purple-400 to-indigo-400 relative overflow-hidden z-10">
+    <section className="py-24 bg-brand-gradient relative overflow-hidden z-10">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[500px] bg-white/20 blur-[150px] rounded-full pointer-events-none"></div>
       <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
         <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-6 drop-shadow-md">

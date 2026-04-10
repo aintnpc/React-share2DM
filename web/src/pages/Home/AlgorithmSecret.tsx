@@ -8,23 +8,23 @@ const AlgorithmSecret = () => {
   return (
     <section className="py-24 bg-white relative overflow-hidden border-t border-gray-100">
       {/* 배경 조명 효과 */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-100/60 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-100/60 blur-[100px] rounded-full pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-violet/20 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-pink/20 blur-[100px] rounded-full pointer-events-none"></div>
 
       <div className="max-w-6xl mx-auto px-6 relative z-10">
         <div className="grid md:grid-cols-2 gap-16 items-center">
 
           {/* 왼쪽: 텍스트 설명 */}
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-lavender/15 border border-brand-lavender/30 text-brand-dark text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
               <span>Growth Hack Secret</span>
             </div>
 
             <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
               {t(
-                <>고객에게 정보를 주었을 뿐인데, <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">알고리즘 노출</span>이 폭발합니다.</>,
-                <>You just shared info with customers, <br />and your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">algorithm reach</span> explodes.</>
+                <>고객에게 정보를 주었을 뿐인데, <br /><span className="text-transparent bg-clip-text bg-brand-gradient-r">알고리즘 노출</span>이 폭발합니다.</>,
+                <>You just shared info with customers, <br />and your <span className="text-transparent bg-clip-text bg-brand-gradient-r">algorithm reach</span> explodes.</>
               )}
             </h2>
 
@@ -51,15 +51,15 @@ const AlgorithmSecret = () => {
           {/* 오른쪽: 인용구 카드 */}
           <div className="relative">
             {/* 카드 배경 Glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 blur-2xl opacity-20 rounded-3xl transform rotate-3"></div>
+            <div className="absolute inset-0 bg-brand-gradient blur-2xl opacity-20 rounded-3xl transform rotate-3"></div>
 
             <div className="relative bg-white border border-gray-200 rounded-3xl p-8 md:p-10 shadow-xl backdrop-blur-xl">
-              <Quote className="w-10 h-10 text-purple-400 mb-6 opacity-60" />
+              <Quote className="w-10 h-10 text-brand-lavender mb-6 opacity-60" />
 
               <blockquote className="text-xl md:text-2xl text-gray-900 font-medium leading-relaxed mb-8">
                 {t(
-                  <>"릴스 랭킹에서 가장 중요한 신호 중 하나는 <span className="text-purple-400"> '공유(Sends)'</span>입니다. 사람들이 콘텐츠를 보고 친구에게 DM으로 보내고 싶어한다면, 우리는 그 콘텐츠를 더 많은 사람에게 노출시킵니다."</>,
-                  <>"One of the most important signals for Reels ranking is <span className="text-purple-400"> 'Sends'</span>. If people see content and want to DM it to a friend, we show that content to more people."</>
+                  <>"릴스 랭킹에서 가장 중요한 신호 중 하나는 <span className="text-brand-violet"> '공유(Sends)'</span>입니다. 사람들이 콘텐츠를 보고 친구에게 DM으로 보내고 싶어한다면, 우리는 그 콘텐츠를 더 많은 사람에게 노출시킵니다."</>,
+                  <>"One of the most important signals for Reels ranking is <span className="text-brand-violet"> 'Sends'</span>. If people see content and want to DM it to a friend, we show that content to more people."</>
                 )}
               </blockquote>
 
