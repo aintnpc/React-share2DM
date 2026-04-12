@@ -1,5 +1,5 @@
 import { useLang } from '../lib/i18n';
-import { Play, Hand, ShoppingBag, ArrowRight, Crown, Sparkles } from 'lucide-react';
+import { Play, Hand, ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ClozetConnect = () => {
@@ -45,7 +45,7 @@ const ClozetConnect = () => {
       <div className="text-center relative z-10 mb-20">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-lavender/15 border border-brand-lavender/30 mb-6">
           <Sparkles className="w-4 h-4 text-brand-violet" />
-          <span className="text-sm font-semibold text-brand-dark">Clozet Connect</span>
+          <span className="text-sm font-semibold text-brand-dark">{t('자사몰 구매전환', 'D2C Commerce')}</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">
           {t('영상 하나에, 여러 상품을 담다', 'Multiple Products, One Video')}
@@ -155,86 +155,6 @@ const ClozetConnect = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Clozet Store vs D2C comparison */}
-      <div className="relative z-10 w-full max-w-4xl mb-20">
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">
-          {t('어디로 연결할까요?', 'Where do you connect?')}
-        </h2>
-        <p className="text-gray-500 text-center mb-12 text-sm">
-          {t('스티커를 탭하면 선택한 스토어로 바로 연결됩니다.', 'Tapping a sticker takes customers straight to your chosen store.')}
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Clozet Store */}
-          <div className="p-8 rounded-3xl bg-gray-50 border border-gray-200 flex flex-col shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center">
-                <ShoppingBag className="w-6 h-6 text-purple-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">{t('Clozet 스토어', 'Clozet Store')}</h3>
-                <span className="text-xs text-green-600 font-medium">{t('모든 플랜', 'All Plans')}</span>
-              </div>
-            </div>
-            <ul className="space-y-3 flex-1 mb-6">
-              <li className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 shrink-0" />
-                <span className="text-gray-600 text-sm">{t('가입 즉시 사용 가능', 'Available immediately after sign-up')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 shrink-0" />
-                <span className="text-gray-600 text-sm">{t('숏폼에 최적화된 네이티브 구매 경험', 'Native purchase experience optimized for short-form')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 shrink-0" />
-                <span className="text-gray-600 text-sm">{t('별도 쇼핑몰 없이도 판매 시작', 'Start selling without your own store')}</span>
-              </li>
-            </ul>
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-100 transition-colors"
-            >
-              {t('무료로 시작하기', 'Start Free')}
-            </button>
-          </div>
-
-          {/* D2C Store */}
-          <div className="p-8 rounded-3xl bg-gradient-to-b from-brand-lavender/15 to-white border border-brand-lavender/30 flex flex-col relative overflow-hidden shadow-[0_0_40px_rgba(201,168,236,0.15)]">
-            <div className="absolute top-0 inset-x-0 flex justify-center transform -translate-y-1/2">
-              <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">Growth</span>
-            </div>
-            <div className="flex items-center gap-3 mb-6 mt-2">
-              <div className="w-12 h-12 rounded-2xl bg-pink-100 flex items-center justify-center">
-                <Crown className="w-6 h-6 text-pink-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">{t('자사몰 연결', 'Your Own Store')}</h3>
-                <span className="text-xs text-pink-500 font-medium">{t('Growth 플랜 필요', 'Growth Plan Required')}</span>
-              </div>
-            </div>
-            <ul className="space-y-3 flex-1 mb-6">
-              <li className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-pink-400 mt-2 shrink-0" />
-                <span className="text-gray-600 text-sm">{t('브랜드 자체 쇼핑몰로 직접 연결', 'Connect directly to your own shopping mall')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-pink-400 mt-2 shrink-0" />
-                <span className="text-gray-600 text-sm">{t('자사 브랜딩 & 고객 데이터 100% 유지', 'Keep 100% of your branding & customer data')}</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-pink-400 mt-2 shrink-0" />
-                <span className="text-gray-600 text-sm">{t('기존 결제·CS 시스템 그대로 활용', 'Leverage your existing payment & CS systems')}</span>
-              </li>
-            </ul>
-            <button
-              onClick={() => navigate('/pricing')}
-              className="w-full py-3 rounded-xl bg-brand-gradient text-white font-bold hover:opacity-90 transition-opacity shadow-lg shadow-brand-violet/20"
-            >
-              {t('Growth 플랜 보기', 'View Growth Plan')} <ArrowRight className="inline w-4 h-4 ml-1" />
-            </button>
           </div>
         </div>
       </div>

@@ -61,14 +61,14 @@ const Hero = () => {
           <div className={`absolute w-full transition-all duration-700 ease-in-out transform ${step === 1 ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95 pointer-events-none'}`}>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight text-gray-900 mb-6">
               {t(
-                <>솔직히 본인도 인스타그램 게시물에 <br className="hidden md:block"/> 댓글 안다시지 않나요?</>,
-                <>Be honest — do you ever <br className="hidden md:block"/> leave comments on Instagram posts?</>
+                <>콘텐츠는 자연스럽게 유지하면서,<br className="hidden md:block"/> 팔로워가 구매하게 할 수 없을까요?</>,
+                <>Can you keep your content natural<br className="hidden md:block"/> while still driving purchases?</>
               )}
             </h1>
             <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-500 leading-relaxed">
               {t(
-                <>댓글 작성한 계정의 90%는 <strong className="text-gray-900">비공개 계정</strong>입니다.<br/>사람들은 본인을 노출하기 싫어서 부계정까지 만드는 와중에 댓글을 달까요?</>,
-                <>90% of commenters use <strong className="text-gray-900">private accounts</strong>.<br/>People create alt accounts to stay hidden — would they leave a public comment?</>
+                <>댓글 이벤트는 피드를 광고판으로 만듭니다.<br/>프로필 링크는 귀찮고, 직접 DM은 한계가 있습니다.</>,
+                <>Comment events turn your feed into an ad board.<br/>Bio links are friction, and manual DMs don't scale.</>
               )}
             </p>
           </div>
@@ -82,8 +82,8 @@ const Hero = () => {
             </h1>
             <p className="text-xl text-gray-500 mb-10 max-w-2xl mx-auto">
               {t(
-                <>현재 도구들이 놓치고 있는 잠수족(Lurker) 90%를 전환하세요.<br/>공유는 어떤 활동 로그에도 남지 않습니다.</>,
-                <>Convert the 90% of lurkers that current tools miss.<br/>Sharing leaves zero trace in any activity log.</>
+                <>피드 분위기는 그대로, 구매 링크는 DM으로 자동 전달.<br/>소란 없이. 링크만.</>,
+                <>Your feed stays as is. Purchase links delivered via DM, automatically.<br/>No noise. Just links.</>
               )}
             </p>
             <button onClick={() => navigate('/login')} className="px-8 py-4 text-lg font-medium text-white transition-all bg-brand-gradient rounded-full hover:opacity-90 shadow-[0_0_30px_rgba(155,154,238,0.4)] hover:shadow-[0_0_40px_rgba(155,154,238,0.6)]">

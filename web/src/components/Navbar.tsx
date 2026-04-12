@@ -30,16 +30,10 @@ const Navbar = () => {
           {t('홈', 'Home')}
         </button>
         <button
-          onClick={() => navigate('/pricing')}
-          className={`transition-colors ${currentPath === '/pricing' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-        >
-          {t('요금제', 'Pricing')}
-        </button>
-        <button
           onClick={() => navigate('/clozet-connect')}
           className={`transition-colors ${currentPath === '/clozet-connect' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
         >
-          Clozet Connect
+          {t('자사몰 구매전환', 'D2C Commerce')}
         </button>
       </div>
       <div className="flex items-center gap-3 md:gap-4">

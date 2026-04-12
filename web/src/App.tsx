@@ -27,7 +27,7 @@ function App() {
         {/* Landing pages with Navbar + Footer */}
         <Route element={<LandingLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/pricing" element={<Navigate to="/" />} />
           <Route path="/clozet-connect" element={<ClozetConnect />} />
         </Route>
 
