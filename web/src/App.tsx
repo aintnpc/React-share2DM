@@ -4,7 +4,6 @@ import { LangProvider } from './lib/i18n';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/Home';
-import Pricing from './pages/Pricing';
 import ClozetConnect from './pages/ClozetConnect';
 import BillingSuccess from './pages/BillingSuccess';
 import BillingFail from './pages/BillingFail';
