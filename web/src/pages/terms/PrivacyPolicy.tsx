@@ -80,7 +80,7 @@ export default function PrivacyPolicy() {
       <li>라. 처리정지 요구</li>
     </ul>
 
-    <p><strong>2.</strong> 제1항에 따른 권리 행사는 이메일(share2dm@gmail.com)을 통하여 하실 수 있으며, 서비스는 이에 대해 지체없이 조치하겠습니다.</p>
+    <p><strong>2.</strong> 제1항에 따른 권리 행사는 이메일(jaewon@share2dm.xyz)을 통하여 하실 수 있으며, 서비스는 이에 대해 지체없이 조치하겠습니다.</p>
 
     <h2>제7조 (개인정보의 파기)</h2>
     <p><strong>1.</strong> 서비스는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체없이 해당 개인정보를 파기합니다.</p>
@@ -104,7 +104,7 @@ export default function PrivacyPolicy() {
     <p>서비스는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 정보주체의 불만처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.</p>
     <ul>
       <li>서비스명: share2dm</li>
-      <li>이메일: share2dm@gmail.com</li>
+      <li>이메일: jaewon@share2dm.xyz</li>
     </ul>
 
     <h2>제10조 (개인정보 처리방침 변경)</h2>
@@ -125,7 +125,7 @@ export default function PrivacyPolicy() {
     <p><strong>서비스 정보</strong><br>
     서비스명: share2dm<br>
     웹사이트: https://share2dm.xyz<br>
-    이메일: share2dm@gmail.com</p>
+    이메일: jaewon@share2dm.xyz</p>
   `;
 
   return (

@@ -8,7 +8,7 @@ const CORS_HEADERS = {
 };
 
 const CAFE24_SCOPES = 'mall.read_product mall.read_store mall.read_order mall.read_salesreport mall.read_category';
-const FRONTEND_ORIGIN = 'https://clozet.my';
+const FRONTEND_ORIGIN = 'https://dashboard.clozet.my';
 
 function buildAuthUrl(mallId: string, clientId: string, redirectUri: string, state: string): string {
   const params = new URLSearchParams({
@@ -59,7 +59,7 @@ export async function handleCafe24Callback(request: Request, env: Env): Promise<
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const stateParam = url.searchParams.get('state');
-  const dashboardUrl = `${FRONTEND_ORIGIN}/dashboard`;
+  const dashboardUrl = `${FRONTEND_ORIGIN}/seller`;
 
   if (!code || !stateParam) {
     return Response.redirect(`${dashboardUrl}?cafe24_error=missing_params`, 302);

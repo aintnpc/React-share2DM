@@ -218,7 +218,7 @@ export async function handleClozetContentLookup(url: URL, env: Env): Promise<Res
       found: true,
       content_id: content.id,
       short_code: content.short_code,
-      clozet_url: `https://clozet.my/reel/${content.short_code}`,
+      clozet_url: `https://app.clozet.my/reel/${content.short_code}`,
     }),
     { status: 200, headers: CORS_HEADERS }
   );

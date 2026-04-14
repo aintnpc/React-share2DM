@@ -94,7 +94,7 @@ export default function ServiceTerms() {
     <p><strong>서비스 정보</strong><br>
     서비스명: share2dm<br>
     웹사이트: https://share2dm.xyz<br>
-    이메일: share2dm@gmail.com</p>
+    이메일: jaewon@share2dm.xyz</p>
   `;
 
   return (

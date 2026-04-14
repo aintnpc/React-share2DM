@@ -55,7 +55,7 @@ const Footer = () => {
             <ul className="space-y-4 text-sm text-gray-500">
               <li><button onClick={() => navigate('/terms/service')} className="hover:text-brand-violet transition-colors">{t('이용약관', 'Terms of Service')}</button></li>
               <li><button onClick={() => navigate('/terms/privacy')} className="hover:text-brand-violet transition-colors">{t('개인정보처리방침', 'Privacy Policy')}</button></li>
-              <li><a href="mailto:share2dm@gmail.com" className="hover:text-brand-violet transition-colors">{t('문의하기', 'Contact Us')}</a></li>
+              <li><a href="mailto:jaewon@share2dm.xyz" className="hover:text-brand-violet transition-colors">{t('문의하기', 'Contact Us')}</a></li>
             </ul>
           </div>
 
@@ -63,8 +63,8 @@ const Footer = () => {
             <h4 className="text-gray-900 font-semibold mb-6">{t('고객 지원', 'Support')}</h4>
             <div className="p-4 rounded-xl bg-white border border-gray-200">
               <p className="text-sm text-gray-500 mb-4">{t('궁금한 점이 있으신가요?', 'Have a question?')}</p>
-              <a href="mailto:share2dm@gmail.com" className="flex items-center gap-2 text-sm text-gray-900 hover:text-brand-violet transition-colors">
-                <Mail className="w-4 h-4" /> share2dm@gmail.com
+              <a href="mailto:jaewon@share2dm.xyz" className="flex items-center gap-2 text-sm text-gray-900 hover:text-brand-violet transition-colors">
+                <Mail className="w-4 h-4" /> jaewon@share2dm.xyz
               </a>
             </div>
           </div>
