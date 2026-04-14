@@ -132,6 +132,107 @@ async function handleMediaList(url: URL, env: Env): Promise<Response> {
   }
 }
 
+// Daily cron: ig_contents_code 있는 콘텐츠의 video_url + thumbnail_url 일괄 갱신
+async function refreshIgContentUrls(supabase: any): Promise<void> {
+  console.log('[Cron] IG content URL refresh started');
+
+  // 1. ig_contents_code 있는 모든 콘텐츠와 creator_id 조회
+  const { data: contents } = await supabase
+    .from('contents')
+    .select('id, ig_contents_code, creator_id')
+    .not('ig_contents_code', 'is', null);
+
+  if (!contents?.length) {
+    console.log('[Cron] No ig_contents_code contents found');
+    return;
+  }
+
+  // 2. creator_id → brand access token 매핑 (중복 조회 방지)
+  const brandTokenCache: Record<string, string> = {};
+  const { data: brands } = await supabase
+    .from('share2dm_brands')
+    .select('clozet_seller_id, ig_access_token');
+  for (const brand of brands ?? []) {
+    brandTokenCache[brand.clozet_seller_id] = brand.ig_access_token;
+  }
+
+  let updated = 0;
+  let failed = 0;
+
+  for (const content of contents) {
+    const token = brandTokenCache[content.creator_id];
+    if (!token) { failed++; continue; }
+
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/v21.0/${content.ig_contents_code}?fields=media_url,thumbnail_url,media_type&access_token=${token}`
+      );
+      const data = await res.json() as any;
+      if (data.error) { failed++; continue; }
+
+      await supabase
+        .from('contents')
+        .update({
+          video_url: data.media_url ?? null,
+          thumbnail_url: data.thumbnail_url ?? data.media_url ?? null,
+          url_refreshed_at: new Date().toISOString(),
+        })
+        .eq('id', content.id);
+
+      updated++;
+    } catch {
+      failed++;
+    }
+  }
+
+  console.log(`[Cron] IG URL refresh done: ${updated} updated, ${failed} failed`);
+}
+
+// /video-url?brand_id=...&media_id=... → IG Graph API로 실시간 video/thumbnail URL 반환
+async function handleVideoUrl(url: URL, env: Env): Promise<Response> {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+  };
+
+  const brandId = url.searchParams.get('brand_id');
+  const mediaId = url.searchParams.get('media_id');
+
+  if (!brandId || !mediaId) {
+    return new Response(JSON.stringify({ error: 'brand_id and media_id required' }), { status: 400, headers });
+  }
+
+  try {
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+    const { data: brand } = await supabase
+      .from('share2dm_brands')
+      .select('ig_access_token')
+      .eq('id', brandId)
+      .single();
+
+    if (!brand) {
+      return new Response(JSON.stringify({ error: 'brand not found' }), { status: 404, headers });
+    }
+
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${mediaId}?fields=media_url,thumbnail_url,media_type&access_token=${brand.ig_access_token}`
+    );
+    const data = await res.json() as { media_url?: string; thumbnail_url?: string; media_type?: string; error?: { message: string } };
+
+    if (data.error) {
+      return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers });
+    }
+
+    return new Response(JSON.stringify({
+      video_url: data.media_url ?? null,
+      thumbnail_url: data.thumbnail_url ?? null,
+      media_type: data.media_type ?? null,
+    }), { status: 200, headers });
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+  }
+}
+
 // /media-id?brand_id=...&url=... → brand의 access token으로 media 조회 → ig_contents_id 반환
 async function handleMediaId(url: URL, env: Env): Promise<Response> {
   const headers = {
@@ -247,6 +348,24 @@ export default {
         return handleTracking(request, env);
       }
 
+      // video-url: IG media_id로 실시간 video/thumbnail URL 반환 (GET /video-url?brand_id=...&media_id=...)
+      if (url.pathname === '/video-url' && request.method === 'GET') {
+        return handleVideoUrl(url, env);
+      }
+
+      // thumbnail-proxy: Instagram CDN 이미지 CORS 우회 프록시 (GET /thumbnail-proxy?url=...)
+      if (url.pathname === '/thumbnail-proxy' && request.method === 'GET') {
+        const imageUrl = url.searchParams.get('url');
+        if (!imageUrl || !imageUrl.includes('cdninstagram.com')) {
+          return new Response('invalid url', { status: 400 });
+        }
+        const res = await fetch(imageUrl);
+        const headers = new Headers(res.headers);
+        headers.set('Access-Control-Allow-Origin', '*');
+        headers.set('Cache-Control', 'public, max-age=3600');
+        return new Response(res.body, { status: res.status, headers });
+      }
+
       // media-id: brand의 access token으로 shortcode → media_id (GET /media-id?brand_id=...&url=...)
       if (url.pathname === '/media-id' && request.method === 'GET') {
         return handleMediaId(url, env);
@@ -347,6 +466,9 @@ export default {
         .in('status', ['sent', 'failed'])
         .lt('created_at', sevenDaysAgo);
       console.log(`[Cron] Queue cleanup: deleted ${count} old sent/failed items`);
+
+      // Refresh Instagram video_url + thumbnail_url for all ig_contents_code contents
+      await refreshIgContentUrls(supabase);
 
       // Token expiry D-7 warning
       if (env.RESEND_API_KEY) {

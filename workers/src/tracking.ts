@@ -211,5 +211,13 @@ export async function handleTracking(
   const productUrl = campaign.product_url.startsWith('http')
     ? campaign.product_url
     : `https://${campaign.product_url}`;
-  return Response.redirect(productUrl, 302);
+
+  // app.clozet.my로 가는 경우 sticker click 추적용 파라미터 추가
+  let finalUrl = productUrl;
+  if (productUrl.includes('app.clozet.my') || productUrl.includes('clozet.my')) {
+    const separator = productUrl.includes('?') ? '&' : '?';
+    finalUrl = `${productUrl}${separator}s2dm_cid=${campaignId}&s2dm_sid=${senderIgId}`;
+  }
+
+  return Response.redirect(finalUrl, 302);
 }
